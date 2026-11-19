@@ -1,0 +1,25 @@
+completo: F1 de ferrugem por dobra [0.924, 0.917, 0.914] | media 0.9188
+so_folha (sem Hough): F1 de ferrugem por dobra [0.892, 0.852, 0.865] | media 0.8699
+so_circulos: F1 de ferrugem por dobra [0.928, 0.905, 0.909] | media 0.9138
+completo_logistica: F1 de ferrugem por dobra [0.928, 0.926, 0.944] | media 0.9327
+completo_media: F1 de ferrugem por dobra [0.923, 0.921, 0.933] | media 0.9254
+completo_floresta: F1 de ferrugem por dobra [0.924, 0.922, 0.925] | media 0.9238
+rico: F1 de ferrugem por dobra [0.933, 0.945, 0.936] | media 0.9380
+rico_media: F1 de ferrugem por dobra [0.936, 0.942, 0.939] | media 0.9390
+rico_floresta: F1 de ferrugem por dobra [0.936, 0.931, 0.931] | media 0.9328
+pulando 'completo_hough_100_20': sem atributos com param1 100 e param2 20 para 'bracol' (rode: extrair --dataset bracol --param1 100 --param2 20)
+
+--- bracol: fora da dobra (3 dobras por grupo, treino + validacao; F1 de ferrugem, foto a foto) ---
+            variante  f1_d0  f1_d1  f1_d2  f1_media  limiar  f1_limiar_unico  sensibilidade  especificidade  f1_macro_3_classes
+            completo 0.9244 0.9174 0.9145    0.9188    0.26           0.9240         0.9249          0.9413              0.9346
+so_folha (sem Hough) 0.8921 0.8524 0.8652    0.8699    0.46           0.8696         0.8863          0.8840              0.8987
+         so_circulos 0.9275 0.9049 0.9091    0.9138    0.80           0.9170         0.8940          0.9574              0.9175
+  completo_logistica 0.9284 0.9257 0.9440    0.9327    0.52           0.9335         0.9326          0.9501              0.9212
+      completo_media 0.9226 0.9209 0.9326    0.9254    0.44           0.9324         0.9306          0.9501              0.9380
+   completo_floresta 0.9244 0.9222 0.9249    0.9238    0.56           0.9265         0.9114          0.9574              0.9239
+                rico 0.9326 0.9449 0.9364    0.9380    0.54           0.9434         0.9306          0.9677              0.9476
+          rico_media 0.9364 0.9415 0.9391    0.9390    0.30           0.9418         0.9518          0.9471              0.9438
+       rico_floresta 0.9360 0.9310 0.9313    0.9328    0.52           0.9344         0.9191          0.9633              0.9384
+
+escolhida: rico_media | limiar 0.30 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough_bracol\decisao.json
+modelo final de 'bracol' (rico_media, 1200 fotos de treino + validacao, limiar 0.30): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\models\bracol_hough.joblib

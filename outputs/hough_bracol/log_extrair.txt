@@ -1,0 +1,10 @@
+bracol: extraindo circulos e atributos de 1401 fotos (param1 60, param2 12)...
+cache: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\data\cache_rocole_hough\bracol_atributos_p60_12.joblib
+
+circulos por classe e lado (so o TREINO):
+               media  mediana  com_circulo
+classe  lado                              
+healthy        4.660      2.0        0.680
+other         39.901     43.0        0.998
+rust          37.118     37.0        1.000
+figura: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough_bracol\propostas_treino.jpg

@@ -1,0 +1,19 @@
+200/1479 fotos
+400/1479 fotos
+600/1479 fotos
+800/1479 fotos
+1000/1479 fotos
+1200/1479 fotos
+1400/1479 fotos
+
+mascaras aceitas: 1353 de 1479 (91.5%)
+motivos da foto inteira: {'baixa confianca': 114, 'sem mascara valida no centro': 12}
+aceitas por classe e split:
+split             test  train    val
+classe                              
+healthy          0.943  0.941  0.972
+red_spider_mite  0.864  0.811  0.864
+rust             0.889  0.899  0.901
+area da folha (aceitas): mediana 0.244
+gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\folhas_sam.csv, C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\segmentacao_amostra.jpg, caches e mascaras
+exit: 0

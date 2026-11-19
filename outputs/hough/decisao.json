@@ -1,0 +1,45 @@
+{
+  "escolhida": "rico_floresta",
+  "param1": 60,
+  "param2": 12,
+  "variante": "rico",
+  "nivel2": "floresta",
+  "limiar": 0.32,
+  "f1_media": 0.8238791927307788,
+  "aprovadas_pela_regra": [
+    "completo_floresta",
+    "rico_floresta"
+  ],
+  "regra": "substitui a base 'completo' so com media maior E vitoria em >= 2 das 3 dobras; as variantes so_folha e so_circulos sao ablacoes e nao concorrem",
+  "fusao": {
+    "adotada": true,
+    "variante": "fusao_w0.50",
+    "w": 0.5,
+    "limiar": 0.28,
+    "pesos_testados": [
+      0.25,
+      0.5,
+      0.75
+    ],
+    "regra": "a fusao substitui o modelo de Hough so com media maior E vitoria em >= 2 das 3 dobras"
+  },
+  "recusa": {
+    "adotada": true,
+    "meta_f1": 0.9,
+    "taxas_testadas": [
+      0.0,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3
+    ],
+    "regra": "a menor taxa de recusa cujo F1 de ferrugem nas fotos aceitas (fora da dobra, media das 3 dobras, limiar e margem das outras dobras) chega a meta",
+    "taxa": 0.2,
+    "limiar": 0.28,
+    "margem": 0.14904054130357464,
+    "f1_media_aninhada": 0.9105097183605886,
+    "aceitas_media": 0.7927694423843995
+  }
+}

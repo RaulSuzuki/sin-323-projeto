@@ -1,0 +1,12 @@
+Modelo: resnet50 | teste: 208 imagens
+Metrica principal: F1 macro (classes desbalanceadas; acaro-vermelho e ~10% das imagens)
+
+                precision    recall  f1-score   support
+
+      Saudavel     0.9364    0.9810    0.9581       105
+Acaro-vermelho     0.4762    0.4545    0.4651        22
+      Ferrugem     0.8571    0.8148    0.8354        81
+
+      accuracy                         0.8606       208
+     macro avg     0.7566    0.7501    0.7529       208
+  weighted avg     0.8568    0.8606    0.8582       208

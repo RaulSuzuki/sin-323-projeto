@@ -1,0 +1,13 @@
+estrategia,doenca,metrica,estimativa,IC95_inf,IC95_sup
+so_face,rust,sensibilidade,0.9761904761904762,0.9142857142857143,1.0
+so_face,rust,especificidade,0.8771929824561403,0.7560975609756098,0.9583333333333334
+so_verso,rust,sensibilidade,0.8571428571428571,0.6944444444444444,0.9705988917306052
+so_verso,rust,especificidade,0.8596491228070176,0.7272727272727273,0.9479300902061855
+duas_fotos,rust,sensibilidade,0.9761904761904762,0.9142857142857143,1.0
+duas_fotos,rust,especificidade,0.8070175438596491,0.6511627906976745,0.9146341463414634
+so_face,red_spider_mite,sensibilidade,0.2,0.0,0.4
+so_face,red_spider_mite,especificidade,1.0,1.0,1.0
+so_verso,red_spider_mite,sensibilidade,0.2,0.0,0.4
+so_verso,red_spider_mite,especificidade,1.0,1.0,1.0
+duas_fotos,red_spider_mite,sensibilidade,0.4,0.09977272727272729,0.6666666666666666
+duas_fotos,red_spider_mite,especificidade,1.0,1.0,1.0

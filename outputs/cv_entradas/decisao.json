@@ -1,0 +1,13 @@
+{
+  "escolhida": "foto",
+  "medias": {
+    "foto": 0.7832008593798672,
+    "recorte": 0.7978302067375972,
+    "recorte_mascara": 0.7858252526030095
+  },
+  "vitorias_sobre_foto": {
+    "recorte": 1,
+    "recorte_mascara": 1
+  },
+  "aprovadas": []
+}

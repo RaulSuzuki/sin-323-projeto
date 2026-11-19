@@ -1,0 +1,13 @@
+--- Recusa no teste (208 fotos; recusa se |P - 0.28| < 0.149) ---
+aceitas: 86.1% (179 de 208) | nas aceitas: F1 0.9351, sensibilidade 0.9863, especificidade 0.9151 (vp 72, fn 1, fp 9, vn 97)
+sem recusa (todas as fotos): F1 0.8786
+IC 95% por bootstrap de plantas:
+         estimativa  IC95_inf  IC95_sup
+aceitas      0.8606    0.7562    0.9265
+f1           0.9351    0.8454    0.9804
+recusadas por classe (recusadas, total):
+                 sum  count
+classe                     
+healthy           10    105
+red_spider_mite   11     22
+rust               8     81

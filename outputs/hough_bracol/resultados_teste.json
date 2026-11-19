@@ -1,0 +1,68 @@
+{
+  "conjunto": "bracol",
+  "n_teste": 201,
+  "n_ferrugem": 86,
+  "limiar": 0.3,
+  "variante": "rico",
+  "classes": [
+    "healthy",
+    "other",
+    "rust"
+  ],
+  "ferrugem": {
+    "sensibilidade": 0.9651162790697675,
+    "especificidade": 0.9478260869565217,
+    "acuracia_balanceada": 0.9564711830131446,
+    "f1": 0.9485714285714286,
+    "precisao": 0.9325842696629213,
+    "acuracia": 0.9552238805970149,
+    "vp": 83,
+    "fn": 3,
+    "fp": 6,
+    "vn": 109
+  },
+  "ic95": {
+    "sensibilidade": [
+      0.9213483146067416,
+      1.0
+    ],
+    "especificidade": [
+      0.905511811023622,
+      0.9831932773109243
+    ],
+    "acuracia_balanceada": [
+      0.9256837186248462,
+      0.9818222768222767
+    ],
+    "f1": [
+      0.9124945175438596,
+      0.9785003431708991
+    ],
+    "acuracia": [
+      0.925,
+      0.9802955665024631
+    ]
+  },
+  "taxa_ferrugem_por_classe": {
+    "healthy": 0.0,
+    "other": 0.06382978723404255,
+    "rust": 0.9651162790697675
+  },
+  "matriz_confusao": [
+    [
+      21,
+      0,
+      0
+    ],
+    [
+      0,
+      88,
+      6
+    ],
+    [
+      1,
+      2,
+      83
+    ]
+  ]
+}

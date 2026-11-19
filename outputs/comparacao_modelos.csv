@@ -1,0 +1,2 @@
+modelo,val_acuracia,val_f1_macro,teste_acuracia,teste_f1_macro,teste_f1_weighted,epoca_escolhida
+resnet50,0.9143,0.8641,0.8606,0.7529,0.8582,18

@@ -1,0 +1,28 @@
+so_ferrugem: 304 folhas...
+W1114 18:23:41.126000 42080 torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+Loading weights:   0%|          | 0/314 [00:00<?, ?it/s]Loading weights:  46%|####5     | 144/314 [00:00<00:00, 1173.89it/s]Loading weights:  83%|########3 | 262/314 [00:00<00:00, 433.94it/s] Loading weights: 100%|##########| 314/314 [00:00<00:00, 453.08it/s]
+saudavel: 144 folhas...
+outras_doencas_sem_ferrugem: 150 folhas...
+
+--- Conferencia externa no BRACOL (arabica, fundo claro). NADA foi ajustado nestas fotos. ---
+                      grupo       modelo  folhas  chamadas_de_ferrugem  fracao  IC95_inf  IC95_sup
+                so_ferrugem modelo final     304                   304   1.000     0.988     1.000
+                so_ferrugem     so Hough     304                   298   0.980     0.958     0.991
+                so_ferrugem so ResNet-50     304                   303   0.997     0.982     0.999
+                   saudavel modelo final     144                    20   0.139     0.092     0.205
+                   saudavel     so Hough     144                    19   0.132     0.086     0.197
+                   saudavel so ResNet-50     144                    16   0.111     0.070     0.173
+outras_doencas_sem_ferrugem modelo final     150                   132   0.880     0.818     0.923
+outras_doencas_sem_ferrugem     so Hough     150                   129   0.860     0.795     0.907
+outras_doencas_sem_ferrugem so ResNet-50     150                    89   0.593     0.513     0.669
+
+so ferrugem, por severidade do BRACOL (fracao chamada de ferrugem pelo modelo final):
+            mean  sum  count
+severidade                  
+1            1.0  202    202
+2            1.0   66     66
+3            1.0   20     20
+4            1.0   16     16
+
+contorno pelo SAM em 100.0% das folhas | mediana de circulos: 23
+gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough\bracol_externo.csv, bracol_resumo.csv, bracol_exemplos.jpg

@@ -1,0 +1,45 @@
+{
+  "modelo": "resnet50",
+  "pesos": "models/rocole_resnet50.pt",
+  "epoca_escolhida": 18,
+  "n_teste": 208,
+  "n_val": 210,
+  "teste": {
+    "acuracia": 0.8605769230769231,
+    "precisao_macro": 0.7565656565656566,
+    "recall_macro": 0.7501042167708833,
+    "f1_macro": 0.7528996173093906,
+    "precisao_weighted": 0.8568410755910757,
+    "recall_weighted": 0.8605769230769231,
+    "f1_weighted": 0.8582119970109373,
+    "f1_healthy": 0.958139534883721,
+    "f1_red_spider_mite": 0.46511627906976744,
+    "f1_rust": 0.8354430379746836
+  },
+  "val": {
+    "acuracia": 0.9142857142857143,
+    "f1_macro": 0.864081520097698
+  },
+  "matriz_confusao_teste": [
+    [
+      103,
+      0,
+      2
+    ],
+    [
+      3,
+      10,
+      9
+    ],
+    [
+      4,
+      11,
+      66
+    ]
+  ],
+  "classes": [
+    "healthy",
+    "red_spider_mite",
+    "rust"
+  ]
+}
