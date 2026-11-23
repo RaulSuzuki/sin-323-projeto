@@ -23,4 +23,4 @@ duas_fotos            rust especificidade      0.8947    0.8140    0.9600
 duas_fotos red_spider_mite  sensibilidade      0.6000    0.3125    0.8571
 duas_fotos red_spider_mite especificidade      0.9048    0.8033    0.9626
 
-Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\resnet50
+Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\resnet50

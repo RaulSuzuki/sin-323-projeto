@@ -1,32 +1,33 @@
-# Detector de ferrugem do café por foto da folha
+# Doenças do café por foto da folha
 
-Projeto da disciplina **SIN 323 (Inteligência Artificial, UFV, 2026/2)**: um aplicativo local que recebe a foto de uma
-folha de café, procura sinais de **ferrugem** e mostra onde encontrou esses sinais.
+Projeto da disciplina **SIN 323 (Inteligência Artificial, UFV, 2026/2)**. Aplicativo local que recebe a foto de uma
+folha de café e diz se ela está **saudável ou com doença**. Se tiver doença, mostra **quais doenças** aparecem e a
+**severidade** estimada, com as lesões marcadas na foto.
 
 > É um **apoio à decisão**. Não substitui o agrônomo.
 
 ![Tela de resultado do aplicativo](docs/app/resultado_bracol.png)
 
-**Quer entender o projeto inteiro?** Leia a [explicação em Word](docs/Explicacao_do_Projeto.docx).
+Relatório completo: [docs/RELATORIO_FINAL.md](docs/RELATORIO_FINAL.md). Explicação geral do projeto:
+[docs/Explicacao_do_Projeto.docx](docs/Explicacao_do_Projeto.docx).
 
-## Resultados principais
+## Resultados
 
-Todos os números são do **conjunto de teste**, com imagens que os modelos nunca viram. IC 95% = intervalo de confiança
-de 95% por bootstrap.
+Números do **conjunto de teste**, com imagens que os modelos nunca viram. IC 95% por bootstrap.
 
-| Pergunta | Modelo | Teste | Resultado | IC 95% |
-|---|---|---|---|---|
-| Há ferrugem? (folha destacada, fundo claro) | Hough + classificador | BRACOL, 201 folhas | F1 **0,949** | 0,912 a 0,979 |
-| Há ferrugem? (foto de campo) | Hough + ResNet-50 | RoCoLe, 208 fotos | F1 **0,879** | 0,774 a 0,934 |
-| Há ferrugem? (campo, com opção de recusa) | o mesmo, respondendo a 86,1% das fotos | RoCoLe, 179 fotos aceitas | F1 **0,935** | 0,845 a 0,980 |
-| Saudável, ácaro-vermelho ou ferrugem? | ResNet-50, 512×288 | RoCoLe, 208 fotos | F1 macro **0,753** | 0,650 a 0,829 |
+| Pergunta | Teste | Resultado | IC 95% |
+|---|---|---|---|
+| Saudável ou doença? | BRACOL, 201 folhas | acerto **99,5%** | 98,5% a 100% |
+| Quais doenças? (bicho-mineiro, ferrugem, mancha de phoma, cercosporiose) | BRACOL, 180 folhas com doença | F1 macro **0,860** | 0,815 a 0,899 |
+| Saudável ou doença? (foto de campo, `--modelo rocole`) | RoCoLe, 208 fotos | acerto **96,6%** | 92,3% a 99,1% |
 
-Os números de conjuntos diferentes não se comparam diretamente: as fotos, as espécies e as classes mudam.
-Detalhes e arquivo de origem de cada número: [docs/RESULTADOS.md](docs/RESULTADOS.md).
+A severidade vem da área da folha com cor de lesão, sem treino. Na validação do BRACOL, deu o nível certo em 83,5%
+das 200 folhas. A origem de cada número está em [docs/RESULTADOS.md](docs/RESULTADOS.md).
 
-## Como rodar o aplicativo
+## Como rodar
 
-Requer o [Anaconda](https://www.anaconda.com/download). O ambiente usa Python 3.13. O uso de GPU é recomendado. No **Anaconda Prompt**, na raiz do projeto:
+Requer o [Anaconda](https://www.anaconda.com/download) e Python 3.13; GPU recomendada. No **Anaconda Prompt**, na raiz
+do projeto:
 
 ```bash
 conda create -n cafe-ferrugem python=3.13 pip
@@ -35,25 +36,18 @@ pip install -r requirements.txt --extra-index-url https://download.pytorch.org/w
 python -P app/app.py
 ```
 
-Nas próximas vezes, basta rodar `conda activate cafe-ferrugem` e `python -P app/app.py`.
+Depois abra <http://127.0.0.1:5000>. Na primeira análise, o segmentador SAM (cerca de 375 MB) é baixado.
 
-Depois abra <http://127.0.0.1:5000>. O modelo padrão é o do BRACOL. Para fotos de campo, use o modelo do RoCoLe, que
-também pode responder "Incerto":
+- **Modelo padrão (BRACOL):** folhas destacadas sobre fundo claro.
+- **`python -P app/app.py --modelo rocole`:** fotos tiradas na planta (saudável, ácaro-vermelho e ferrugem).
+- **"Incerto":** quando nem saudável nem doença passa de 60%, a página mostra o palpite e pede um agrônomo.
 
-```bash
-python -P app/app.py --modelo rocole
-```
-
-Na primeira análise, o segmentador SAM (cerca de 375 MB) é baixado e os modelos são carregados.
-
-Para rodar os testes, com o ambiente ativado e na raiz do projeto:
+Testes, com o ambiente ativado e na raiz do projeto (no Linux ou no macOS, use `export PYTHONPATH=src`):
 
 ```bash
 set PYTHONPATH=src
 python -P -m unittest discover -s tests
 ```
-
-No Linux ou no macOS, troque a primeira linha por `export PYTHONPATH=src`.
 
 ## Organização da pasta
 
@@ -62,35 +56,35 @@ No Linux ou no macOS, troque a primeira linha por `export PYTHONPATH=src`.
 ├── README.md
 ├── requirements.txt
 ├── app/                     aplicativo local (Flask)
-├── src/                     código do detector de ferrugem e da ResNet-50
+├── src/                     código do detector, do modelo das doenças e da ResNet-50
 ├── tests/                   testes automáticos
-├── models/                  modelos finais
+├── models/                  modelos do aplicativo
 ├── outputs/                 resultados, separados por modelo
-├── docs/
-│   ├── Explicacao_do_Projeto.docx
-│   ├── RESULTADOS.md        números finais e arquivo de origem
-│   ├── SELECAO.md           o que entrou nesta pasta, e por quê
-│   ├── RELATORIO_ROCOLE.md  relatório completo do detector e do aplicativo
-│   ├── RELATORIO_BRACOL.md  relatório do modelo de 4 doenças
-│   ├── MANIFESTO.csv        cada arquivo, sua origem e seu SHA-256
-│   ├── app/                 telas do aplicativo
-│   └── specs/               desenho dos métodos, escrito antes dos experimentos
-└── resultados_4_doencas/    pesos e resultados do modelo de 4 doenças
+└── docs/
+    ├── Explicacao_do_Projeto.docx
+    ├── RELATORIO_FINAL.md   relatório do produto final
+    ├── RESULTADOS.md        números finais e arquivo de origem
+    ├── RELATORIO_ROCOLE.md  experimentos no RoCoLe, onde o detector foi criado
+    ├── RELATORIO_BRACOL.md  experimento anterior no BRACOL
+    ├── SELECAO.md           o que entrou nesta pasta, e por quê
+    ├── MANIFESTO.csv        cada arquivo, sua origem e seu SHA-256
+    ├── app/                 telas do aplicativo
+    └── figuras/             metodologia e arquitetura, em imagem
 ```
 
-## Pesos dos modelos
+## Modelos
 
 | Arquivo | Modelo | Uso |
 |---|---|---|
-| `models/bracol_hough.joblib` | detector de ferrugem treinado no BRACOL | modelo padrão do aplicativo |
-| `models/rocole_hough.joblib` | detector de ferrugem treinado no RoCoLe, com fusão e recusa | `--modelo rocole` |
-| `models/rocole_resnet50.pt` | ResNet-50 treinada no RoCoLe | parte da fusão de `--modelo rocole` |
-| `resultados_4_doencas/models/melhor_modelo.pt` | ConvNeXt-Tiny de 4 doenças e severidade | não é usado pelo aplicativo |
+| `models/bracol_hough.joblib` | detector com a transformada de Hough, treinado no BRACOL | primeiro passo do modelo padrão |
+| `models/bracol_doencas.joblib` | um classificador por doença, treinado no BRACOL | segundo passo do modelo padrão |
+| `models/rocole_hough.joblib` | detector com a transformada de Hough, treinado no RoCoLe | `--modelo rocole` |
+| `models/rocole_resnet50.pt` | ResNet-50 treinada no RoCoLe | `--modelo rocole`, em média com o detector |
 
 ## Dados
 
-As imagens não fazem parte desta pasta. Para treinar ou avaliar de novo, baixe os dois conjuntos (licença CC BY 4.0),
-coloque-os em `data/` e siga o [relatório completo](docs/RELATORIO_ROCOLE.md#como-reproduzir):
+As imagens não fazem parte desta pasta. Para treinar ou avaliar de novo, baixe os conjuntos (licença CC BY 4.0) e siga
+o [relatório final](docs/RELATORIO_FINAL.md#como-reproduzir):
 
 - **BRACOL:** <https://data.mendeley.com/datasets/yy2k5y8mxg>
 - **RoCoLe:** Mendeley Data `c5yvn32dzg`
@@ -98,5 +92,16 @@ coloque-os em `data/` e siga o [relatório completo](docs/RELATORIO_ROCOLE.md#co
 ## Limitações
 
 - Cada modelo foi medido só no tipo de foto em que foi treinado. Não há um número que valha para qualquer folha de café.
-- Em fotos de campo, o detector confunde ácaro-vermelho com ferrugem.
-- Os conjuntos de teste são pequenos, por isso os intervalos de confiança são largos.
+- Bicho-mineiro e cercosporiose são as doenças mais difíceis (F1 de 0,809 e 0,720 no teste). A cercosporiose aparece
+  quase sempre junto com a ferrugem.
+- Em fotos de campo, ácaro-vermelho e ferrugem se confundem.
+- A severidade foi conferida só na validação do BRACOL. Em fotos de campo, não foi medida.
+- Os testes são pequenos, por isso os intervalos de confiança são largos.
+
+## Autores
+
+- Ana Flávia Tavares Alves
+- Laissa Rosa dos Santos
+- Raul Suzuki Borges
+
+Universidade Federal de Viçosa, 2026/2

@@ -18,4 +18,4 @@ duas_fotos            rust     104                 47         0.8936          0.
   so_verso red_spider_mite     104                 15         0.6667          0.9775        0.8558
 duas_fotos red_spider_mite     104                 15         0.8000          0.9551        0.8654
 
-Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\resnet50
+Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\resnet50

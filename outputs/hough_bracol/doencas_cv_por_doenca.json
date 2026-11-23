@@ -1,0 +1,99 @@
+{
+  "f1_macro_por_dobra": {
+    "atual_hgb": [
+      0.8433,
+      0.7985,
+      0.7889
+    ],
+    "por_doenca_floresta": [
+      0.8416,
+      0.8367,
+      0.7959
+    ],
+    "por_doenca_hgb": [
+      0.8337,
+      0.833,
+      0.7912
+    ],
+    "por_doenca_logistica": [
+      0.8316,
+      0.7958,
+      0.8118
+    ]
+  },
+  "media": {
+    "atual_hgb": 0.8102,
+    "por_doenca_floresta": 0.8248,
+    "por_doenca_hgb": 0.8193,
+    "por_doenca_logistica": 0.8131
+  },
+  "escolhida": "por_doenca_floresta",
+  "substitui_o_atual": true,
+  "por_doenca": [
+    {
+      "doenca": "miner",
+      "f1": 0.7353,
+      "recall_so_ela": 0.8514,
+      "recall_com_outra": 0.5043,
+      "alarmes": 66,
+      "modelo": "atual_hgb"
+    },
+    {
+      "doenca": "rust",
+      "f1": 0.9402,
+      "recall_so_ela": 0.9808,
+      "recall_com_outra": 0.8953,
+      "alarmes": 30,
+      "modelo": "atual_hgb"
+    },
+    {
+      "doenca": "phoma",
+      "f1": 0.9347,
+      "recall_so_ela": 0.9315,
+      "recall_com_outra": 0.7778,
+      "alarmes": 17,
+      "modelo": "atual_hgb"
+    },
+    {
+      "doenca": "cercospora",
+      "f1": 0.631,
+      "recall_so_ela": 0.697,
+      "recall_com_outra": 0.6011,
+      "alarmes": 91,
+      "modelo": "atual_hgb"
+    },
+    {
+      "doenca": "miner",
+      "f1": 0.8,
+      "recall_so_ela": 0.9143,
+      "recall_com_outra": 0.5565,
+      "alarmes": 46,
+      "modelo": "por_doenca_floresta"
+    },
+    {
+      "doenca": "rust",
+      "f1": 0.9362,
+      "recall_so_ela": 0.977,
+      "recall_com_outra": 0.8605,
+      "alarmes": 23,
+      "modelo": "por_doenca_floresta"
+    },
+    {
+      "doenca": "phoma",
+      "f1": 0.932,
+      "recall_so_ela": 0.9589,
+      "recall_com_outra": 0.8889,
+      "alarmes": 29,
+      "modelo": "por_doenca_floresta"
+    },
+    {
+      "doenca": "cercospora",
+      "f1": 0.6374,
+      "recall_so_ela": 0.697,
+      "recall_com_outra": 0.6436,
+      "alarmes": 103,
+      "modelo": "por_doenca_floresta"
+    }
+  ],
+  "regra": "substitui o atual so com media maior E vitoria em >= 2 das 3 dobras; o teste nao foi lido"
+}

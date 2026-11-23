@@ -21,5 +21,5 @@ so_folha (sem Hough) 0.8921 0.8524 0.8652    0.8699    0.46           0.8696    
           rico_media 0.9364 0.9415 0.9391    0.9390    0.30           0.9418         0.9518          0.9471              0.9438
        rico_floresta 0.9360 0.9310 0.9313    0.9328    0.52           0.9344         0.9191          0.9633              0.9384
 
-escolhida: rico_media | limiar 0.30 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough_bracol\decisao.json
-modelo final de 'bracol' (rico_media, 1200 fotos de treino + validacao, limiar 0.30): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\models\bracol_hough.joblib
+escolhida: rico_media | limiar 0.30 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\hough_bracol\decisao.json
+modelo final de 'bracol' (rico_media, 1200 fotos de treino + validacao, limiar 0.30): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\bracol_hough.joblib

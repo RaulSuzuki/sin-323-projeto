@@ -1,0 +1,41 @@
+{
+  "regra": "passo 1: saudavel ou doenca pela maior das duas (P(doenca) = 1 - P(saudavel)); 'incerto' quando nenhuma passa de 60%; passo 2 (aqui, as classes do modelo de Hough): a classe de doenca mais provavel",
+  "fonte": {
+    "fora_da_dobra": "outputs/hough_bracol/cv_oof.csv",
+    "teste": "outputs/hough_bracol/predicoes_teste.csv"
+  },
+  "fora_da_dobra": {
+    "n": 1200,
+    "acerto": 0.9908333333333333,
+    "doenca_achada": 0.9916434540389972,
+    "saudavel_certa": 0.983739837398374,
+    "incerto": 0.0075,
+    "acerto_nas_incertas": 0.7777777777777778,
+    "acerto_nas_outras": 0.9924433249370277,
+    "tipo_certo_nas_doencas_achadas": 0.9447565543071161
+  },
+  "teste": {
+    "n": 201,
+    "acerto": 0.9950248756218906,
+    "doenca_achada": 0.9944444444444445,
+    "saudavel_certa": 1.0,
+    "incerto": 0.0,
+    "acerto_nas_incertas": null,
+    "acerto_nas_outras": 0.9950248756218906,
+    "tipo_certo_nas_doencas_achadas": 0.9664804469273743,
+    "ic95": {
+      "acerto": [
+        0.9849246231155779,
+        1.0
+      ],
+      "doenca_achada": [
+        0.9828571428571429,
+        1.0
+      ],
+      "saudavel_certa": [
+        1.0,
+        1.0
+      ]
+    }
+  }
+}

@@ -25,4 +25,4 @@ severidade
 4            1.0   16     16
 
 contorno pelo SAM em 100.0% das folhas | mediana de circulos: 23
-gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough\bracol_externo.csv, bracol_resumo.csv, bracol_exemplos.jpg
+gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\hough\bracol_externo.csv, bracol_resumo.csv, bracol_exemplos.jpg

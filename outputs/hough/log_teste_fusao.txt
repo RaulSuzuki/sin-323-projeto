@@ -57,4 +57,4 @@ duas_fotos            rust      99                 42          0.976           0
   so_verso red_spider_mite      99                 15          0.333           0.988         0.818
 duas_fotos red_spider_mite      99                 15          0.400           0.976         0.838
 
-Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough
+Resultados salvos em: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\hough

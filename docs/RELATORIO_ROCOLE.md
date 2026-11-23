@@ -1,11 +1,12 @@
 # RoCoLe: doenças do café em fotos de campo
 
-Parte do projeto de SIN 323 (diagnóstico de doenças do café por foto de folha; o modelo de 4 doenças, com o BRACOL,
-tem pesos e resultados em `resultados_4_doencas/`). Aqui o modelo é separado (outras classes, outra espécie) e serve para medir o
-desempenho em fotos parecidas com as do aplicativo: folhas fotografadas **na planta**, com fundo de campo.
+Parte do projeto de SIN 323. Este relatório reúne os experimentos com o RoCoLe, café robusta fotografado **na
+planta**, com fundo de campo: a ResNet-50, o detector por regras, o recorte da folha com o SAM e o detector de ferrugem
+com a transformada de Hough, com a fusão e a opção de recusa. Foi aqui que nasceu o detector que o aplicativo usa.
 
-O foco do detector e do aplicativo desta pasta é a **ferrugem**, em qualquer folha de café: de qualquer região,
-espécie e tipo de foto. O que já foi medido em cada tipo de folha está em
+O produto final (o detector treinado no BRACOL, o modelo das doenças e o aplicativo) está no
+[relatório final](RELATORIO_FINAL.md). O modelo de 4 doenças, com o BRACOL, está no
+[relatório do BRACOL](RELATORIO_BRACOL.md). O que já foi medido em cada tipo de folha está em
 [Em que folhas o detector foi medido](#em-que-folhas-o-detector-foi-medido).
 
 > É um **apoio à decisão**. Não substitui o agrônomo.
@@ -18,7 +19,7 @@ espécie e tipo de foto. O que já foi medido em cada tipo de folha está em
 - **Diagnóstico pela folha inteira** (foto da face + foto do verso; doença presente se aparece em qualquer lado),
   escolhido na validação e pontuado uma vez no teste: ferrugem achada em 39 das 42 folhas (92,9%) e ácaro em 9 das
   15 (60,0%), contra 37 e 2 só com a foto da face.
-- **Detector de ferrugem com a transformada de Hough** (seção própria abaixo): os círculos do Hough viram
+- **Detector de ferrugem com a transformada de Hough:** os círculos do Hough viram
   *candidatos a lesão* dentro da folha, descritos por cor, contraste, forma e textura e pontuados por um classificador;
   a resposta final é a média com a ResNet-50. Para a pergunta "há ferrugem na foto?", no teste: F1 **0,879**
   (IC 95% 0,774 a 0,934), contra 0,835 da ResNet-50 sozinha e 0,476 do detector por regras. Fora da dobra
@@ -27,13 +28,8 @@ espécie e tipo de foto. O que já foi medido em cada tipo de folha está em
 - **Opção de recusa** ("mostre a um agrônomo"): quando o detector deixa de responder nas fotos em dúvida (20% delas
   fora da dobra, 14% no teste), o F1 de ferrugem nas fotos aceitas é 0,911 fora da dobra e **0,935** no teste
   (IC 95% 0,845 a 0,980). É assim que a meta de 0,90 é atingida.
-- **Um modelo por conjunto** (`--dataset rocole|bracol`): o mesmo código treina e testa em cada conjunto, sem juntar
-  os dois. Treinado e testado no RoCoLe, o detector dá os números acima. Treinado e testado no BRACOL (arábica, folha
-  destacada), o modelo de Hough sozinho dá F1 **0,949** (IC 95% 0,912 a 0,979), sem fusão nem recusa, e separa a
-  ferrugem das outras doenças.
-- **Aplicativo local** (`app/app.py`): recebe fotos sem máscara, acha a folha com o SAM e mostra o veredito com os
-  círculos. Usa por padrão o modelo do BRACOL; `--modelo rocole` troca para a fusão do RoCoLe, com a resposta
-  "Incerto".
+- **Produto final:** o mesmo detector, treinado e testado no BRACOL, o modelo das doenças e o aplicativo estão
+  no [relatório final](RELATORIO_FINAL.md).
 - **Cada modelo vale para o tipo de foto em que foi treinado.** Na conferência externa, o detector do RoCoLe achou a
   ferrugem nas 304 folhas do BRACOL que só têm ferrugem, mas também chamou de ferrugem 13,9% das saudáveis e 88% das
   que têm outra doença. Ver [Limitações](#limitações).
@@ -49,21 +45,19 @@ O que foi feito, em ordem:
 
 | Etapa | O que | Resultado |
 |---|---|---|
-| 1 | Limpeza e divisão agrupada (`src/rocole_preparar.py`) | 1.479 imagens; 1.061 / 210 / 208 |
-| 2 | ResNet-50 com Grad-CAM (`src/rocole_treinar.py`, `src/rocole_avaliar.py`) | F1 macro 0,753 no teste |
-| 3 | Ajustes na validação (`src/rocole_validacao.py`) | deslocamentos: não; folha inteira: sim |
-| 4 | Réplica do detector por regras (`src/rocole_regras.py`) | 0,594 no teste, bem abaixo da CNN |
-| 5 | Folha-alvo com o SAM e validação cruzada (`src/rocole_folha.py`, `src/rocole_cv.py`) | fica a foto inteira |
-| 6 | Folha inteira no teste (`src/rocole_validacao.py --teste`) | ferrugem 92,9%, ácaro 60,0% |
-| 7 | Círculos do Hough e atributos (`src/rocole_hough.py`) | 40 atributos por círculo, 27 por folha |
-| 8 | Modelo de dois níveis e validação cruzada (`src/rocole_hough_treinar.py`) | F1 de ferrugem 0,824 fora da dobra (0,752 sem os círculos) |
-| 9 | Fusão tardia com a ResNet-50 (`rocole_hough_treinar.py fusao`) | 0,847 fora da dobra; adotada |
-| 10 | Teste, uma vez por modelo (`src/rocole_hough_avaliar.py`) | Hough 0,876; fusão 0,879 |
-| 11 | Conferência externa no BRACOL e aplicativo (`app/app.py`) | ferrugem 304 de 304; alarme em 13,9% das saudáveis |
-| 12 | Validação cruzada repetida, auditoria (`rocole_hough_treinar.py cv-repetida`) | a escolha se mantém; modelo de Hough em 0,807 na média de 5 divisões |
-| 13 | Opção de recusa (`src/rocole_hough_recusa.py`) | recusando 20%: F1 0,911 fora da dobra; no teste, 0,935 em 86% das fotos |
-| 14 | Treino e teste por conjunto (`--dataset`, `src/rocole_hough_dados.py`) | BRACOL: 0,939 fora da dobra, 0,949 no teste |
-| 15 | Aplicativo com o modelo do BRACOL por padrão (`app/app.py --modelo`) | 11 de 12 fotos de conferência certas |
+| 1 | Limpeza e divisão agrupada (`src/preparar_rocole.py`) | 1.479 imagens; 1.061 / 210 / 208 |
+| 2 | ResNet-50 com Grad-CAM (`src/cnn_treinar.py`, `src/cnn_avaliar.py`) | F1 macro 0,753 no teste |
+| 3 | Ajustes na validação (`src/cnn_validacao.py`) | deslocamentos: não; folha inteira: sim |
+| 4 | Réplica do detector por regras (`src/regras.py`) | 0,594 no teste, bem abaixo da CNN |
+| 5 | Folha-alvo com o SAM e validação cruzada (`src/folha_sam.py`, `src/cnn_cv.py`) | fica a foto inteira |
+| 6 | Folha inteira no teste (`src/cnn_validacao.py --teste`) | ferrugem 92,9%, ácaro 60,0% |
+| 7 | Círculos do Hough e atributos (`src/hough.py`) | 40 atributos por círculo, 27 por folha |
+| 8 | Modelo de dois níveis e validação cruzada (`src/hough_treinar.py`) | F1 de ferrugem 0,824 fora da dobra (0,752 sem os círculos) |
+| 9 | Fusão tardia com a ResNet-50 (`hough_treinar.py fusao`) | 0,847 fora da dobra; adotada |
+| 10 | Teste, uma vez por modelo (`src/hough_avaliar.py`) | Hough 0,876; fusão 0,879 |
+| 11 | Conferência externa no BRACOL (`hough_avaliar.py --conferencia-externa`) | ferrugem 304 de 304; alarme em 13,9% das saudáveis |
+| 12 | Validação cruzada repetida, auditoria (`hough_treinar.py cv-repetida`) | a escolha se mantém; modelo de Hough em 0,807 na média de 5 divisões |
+| 13 | Opção de recusa (`src/hough_recusa.py`) | recusando 20%: F1 0,911 fora da dobra; no teste, 0,935 em 86% das fotos |
 
 ## Dados
 
@@ -84,8 +78,7 @@ original publica junto: o nível da ferrugem (1 a 4) e o contorno da folha.
 
 ## Modelo
 
-ResNet-50 pré-treinado no ImageNet, entrada 512×288 (mantém o 16:9), adaptado do `main.py` do trabalho
-de SIN 393: perda com peso por classe, 3 épocas só na última camada e depois a rede inteira (AdamW, AMP), parada
+ResNet-50 pré-treinado no ImageNet, entrada 512×288 (mantém o 16:9), adaptado de outro trabalho: perda com peso por classe, 3 épocas só na última camada e depois a rede inteira (AdamW, AMP), parada
 antecipada pela perda de validação. Parou na época 23; a melhor foi a 18. Cerca de 25 min numa RTX 4050.
 
 O checkpoint fica em `models/rocole_resnet50.pt`. Ao lado dele, `models/rocole_resnet50.json` guarda o
@@ -127,7 +120,7 @@ um ConvNeXt-Tiny com `--modelo convnext_tiny`, deve ser feita pela validação).
 
 ## Ajustes escolhidos na validação
 
-Os dois ajustes foram escolhidos só na validação (`src/rocole_validacao.py`). Só o que foi adotado, a folha
+Os dois ajustes foram escolhidos só na validação (`src/cnn_validacao.py`). Só o que foi adotado, a folha
 inteira, foi pontuado no teste, uma vez, com o modelo final (tabela "No teste", abaixo).
 
 - **Deslocar as probabilidades por classe** (deslocamentos do ácaro e da ferrugem escolhidos pelo F1 macro). Medido
@@ -148,7 +141,7 @@ inteira, foi pontuado no teste, uma vez, com o modelo final (tabela "No teste", 
   sinal a confirmar no teste com o modelo final.
 
 **No teste** (uma vez, com o modelo final; 99 folhas com as duas fotos, 42 com ferrugem e 15 com ácaro; predições
-de `rocole_avaliar.py` sem deslocamento; IC 95% por bootstrap de plantas):
+de `cnn_avaliar.py` sem deslocamento; IC 95% por bootstrap de plantas):
 
 | Estratégia | Ferrugem: sensibilidade | Ferrugem: especificidade | Ácaro: sensibilidade (15 folhas) | Ácaro: especificidade | Folha certa |
 |---|---|---|---|---|---|
@@ -175,7 +168,7 @@ Réplica do método de *Robust Coffee Rust Detection Using UAV-Based Aerial RGB 
 Escobar-Benitez e Rodriguez-Lainez, AgriEngineering 5, 2023), que relata 97% no RoCoLe sem rede neural:
 variância local por canal (janela circular 5×5, como o filtro Variance do ImageJ) → máscara de vermelho/laranja →
 contornos preenchidos → abertura e fechamento (elipse 5×5) → transformada de Hough de círculos → "ferrugem" se houver
-pelo menos *k* círculos. Roda nas fotos originais 1920×1080, só com CPU (`src/rocole_regras.py`, OpenCV).
+pelo menos *k* círculos. Roda nas fotos originais 1920×1080, só com CPU (`src/regras.py`, OpenCV).
 
 O artigo não publica os limiares de cor, os parâmetros do Hough nem a regra de decisão. Eles foram escolhidos no
 treino, numa grade de 3 faixas de cor × 3 sensibilidades do Hough × 6 valores de *k*, pela acurácia balanceada
@@ -197,26 +190,22 @@ Fração das fotos chamadas de "ferrugem": saudáveis 24,8% (ResNet-50: 1,9%), �
 - **Bem abaixo dos 97% do artigo, e da ResNet-50.** Diferenças de protocolo explicam parte: no artigo, especialistas
   revisaram só as fotos em que o método achou ferrugem e reclassificaram 96 "saudáveis" e 47 "ácaro" como
   ferrugem; os parâmetros foram ajustados e avaliados nas mesmas 1.560 fotos.
-- **Alarmes fora da folha-alvo:** solo, folhas secas e folhas vizinhas geram anéis vermelhos/laranja e círculos
-  (`outputs/regras/exemplos_detector.png`). O método pergunta "há ferrugem em algum lugar da foto", e os
-  rótulos do RoCoLe falam da folha-alvo.
+- **Alarmes fora da folha-alvo:** solo, folhas secas e folhas vizinhas geram anéis vermelhos/laranja e círculos. O
+  método pergunta "há ferrugem em algum lugar da foto", e os rótulos do RoCoLe falam da folha-alvo.
 - **Perde lesões no verso da folha:** no teste, acha ferrugem em 57,8% das fotos da face (`H`) e em 25,0% das do
   verso (`E`). Manchas claras sobre o verso, que é mais pálido, não viram anéis vermelhos/laranja no mapa de
   variância. Os exemplos do artigo são da face.
 - **Não separa ácaro de ferrugem o bastante** para ajudar a ResNet-50 nesse ponto: na face da folha, alarma em
   37,5% das fotos de ácaro e 57,8% das de ferrugem.
-- O que vale do artigo: o método é simples, explicável e barato (CPU), e a observação de que fotos "saudáveis" e
-  "ácaro" do RoCoLe às vezes mostram ferrugem em outra folha confirma o ruído de rótulo que vimos.
 
-Arquivos em `outputs/regras/`: `parametros.json`, `ajuste_grade_treino.csv`, `contagens_ajuste.csv`,
-`predicoes_teste.csv`, `resultados_teste.json`, `teste_intervalos_confianca.csv`, `etapas_detector.png`,
-`exemplos_detector.png` e os logs.
+Arquivos em `outputs/regras/`: `predicoes_teste.csv`, `resultados_teste.json` e `teste_intervalos_confianca.csv`. Os
+parâmetros, a grade de ajuste, as figuras e os logs ficam no projeto original.
 
 ## Recortar a folha-alvo (SAM)
 
 A folha-alvo fica no centro da foto, com outras folhas e o solo em volta. Para testar se a CNN se sai melhor olhando
 só para ela, a folha foi segmentada com o SAM (`facebook/sam-vit-base`, via `transformers`), usando um ponto no
-centro da foto como pista (`src/rocole_folha.py`). Fica a parte da máscara ligada ao centro. Ela é aceita se cobrir
+centro da foto como pista (`src/folha_sam.py`). Fica a parte da máscara ligada ao centro. Ela é aceita se cobrir
 de 4% a 60% da foto, com confiança ≥ 0,75; senão, usa-se a foto inteira.
 
 - **1.353 de 1.479 máscaras aceitas (91,5%).** As outras 126 usam a foto inteira (114 por baixa confiança, 12 sem
@@ -225,7 +214,7 @@ de 4% a 60% da foto, com confiança ≥ 0,75; senão, usa-se a foto inteira.
 - Duas entradas novas, também em 512×288: a folha recortada (caixa da máscara + 10% de margem) e a mesma com o fundo
   apagado.
 
-**Comparação por validação cruzada** (`src/rocole_cv.py`): 3 dobras por planta no treino + validação (1.271 fotos; o
+**Comparação por validação cruzada** (`src/cnn_cv.py`): 3 dobras por planta no treino + validação (1.271 fotos; o
 teste não entra), com a mesma receita de treino e a mesma seed por dobra para as três entradas. A regra foi fixada
 antes de rodar: uma entrada recortada só substitui a foto inteira se o F1 macro médio for maior **e** se ela vencer
 em pelo menos 2 das 3 dobras.
@@ -247,14 +236,14 @@ em pelo menos 2 das 3 dobras.
   máscara às vezes tem buracos sobre as lesões, e parte da lesão é apagada.
 - Como a foto inteira ficou, o modelo final continua sendo `models/rocole_resnet50.pt`, e os números do teste acima
   não mudam. Os 9 modelos das dobras ficam em `models/cv/` (fora do git). Os resultados ficam em
-  `outputs/cv_entradas/` (`resultados.csv`, `decisao.json`, `predicoes_fora_da_dobra.csv`, históricos e log).
+  `outputs/cv_entradas/` (`resultados.csv`, `decisao.json` e `predicoes_fora_da_dobra.csv`).
 
 **Detector por regras só dentro da folha** (treino e validação; 1.163 das 1.271 fotos com máscara, as outras com a
 foto inteira). Com os parâmetros escolhidos de novo no treino (faixa larga, `param2` 18, *k* = 1), a acurácia
 balanceada fica em 0,661 no treino e 0,680 na validação, contra 0,585 com a foto inteira: tirar o fundo corta boa
 parte dos alarmes falsos. Mas o detector separa ainda pior o ácaro da ferrugem: na validação, chama de "ferrugem"
 68,2% das fotos de ácaro e 59,3% das de ferrugem (saudáveis: 14,0%). Não ajuda onde a ResNet-50 erra, e por isso
-não foi pontuado no teste. Arquivos em `outputs/regras_folha/`.
+não foi pontuado no teste. Os arquivos dessa variante ficam no projeto original.
 
 ## Detector de ferrugem com a transformada de Hough
 
@@ -273,10 +262,9 @@ Hough faz o que sabe fazer, achar **onde** há algo redondo, e um classificador 
   `param1` é o limiar alto do Canny; `param2`, o mínimo de votos de um centro (menor = mais círculos, e mais fracos).
 - Por que a regra "pelo menos *k* círculos" falha: solo, folhas secas, furos e dano de ácaro também são redondos. A
   contagem de círculos separa ferrugem do resto com AUC de no máximo 0,63 na foto inteira e 0,69 dentro da folha
-  (melhor combinação da grade, em treino + validação; `contagens_ajuste.csv` de `outputs/regras/` e
-  `outputs/regras_folha/`).
+  (melhor combinação da grade do detector por regras, em treino + validação).
 
-### Da foto aos atributos (`src/rocole_hough.py`)
+### Da foto aos atributos (`src/hough.py`)
 
 1. **Contorno da folha.** A máscara do SAM (ponto no centro). Diferente da CNN, aqui a máscara de baixa confiança
    também é usada quando a área é válida (4% a 60% da foto): para o Hough, um contorno imperfeito é melhor que a foto
@@ -303,9 +291,7 @@ Hough faz o que sabe fazer, achar **onde** há algo redondo, e um classificador 
 | Forma da mancha sob o círculo: área, circularidade, alongamento, solidez | mancha redonda contra risco ao longo das nervuras (ácaro) |
 | Folha inteira: cor média e desvio, fração do mapa acima de 4 limiares ("% da folha infectada"), LBP, variância, confiança do SAM, área | clorose e severidade gerais |
 
-LBP e GLCM foram escritos com NumPy e OpenCV; o scikit-image não entra nas dependências.
-
-### Modelo de dois níveis (`src/rocole_hough_treinar.py`)
+### Modelo de dois níveis (`src/hough_treinar.py`)
 
 - **Nível 1, por círculo:** gradient boosting com rótulo fraco (cada círculo herda a classe da sua foto). Diz quanto
   o círculo parece ser de foto saudável, de ácaro ou de ferrugem.
@@ -317,7 +303,7 @@ LBP e GLCM foram escritos com NumPy e OpenCV; o scikit-image não entra nas depe
 
 ### Validação cruzada
 
-Treino + validação (1.271 fotos), nas mesmas 3 dobras por planta de `rocole_cv.py`; o teste não entra. Métrica: F1 de
+Treino + validação (1.271 fotos), nas mesmas 3 dobras por planta de `cnn_cv.py`; o teste não entra. Métrica: F1 de
 ferrugem foto a foto, fora da dobra, com o limiar de cada dobra escolhido nas outras duas. Regra fixada antes de
 rodar (a mesma dos recortes do SAM): uma variante só substitui a base se a média for maior **e** se vencer em pelo
 menos 2 das 3 dobras.
@@ -334,7 +320,7 @@ menos 2 das 3 dobras.
 | Atributos ricos, média | 0,809 | 0,808 | 0,793 | 0,803 |
 | **Atributos ricos, floresta (escolhida)** | 0,832 | 0,831 | 0,808 | **0,824** |
 | Base com Hough mais rígido (`param1` 100, `param2` 20) | 0,749 | 0,784 | 0,721 | 0,751 |
-| ResNet-50, foto inteira (referência, de `rocole_cv.py`) | 0,867 | 0,847 | 0,761 | 0,825 |
+| ResNet-50, foto inteira (referência, de `cnn_cv.py`) | 0,867 | 0,847 | 0,761 | 0,825 |
 
 - **O Hough não é enfeite:** sem os círculos, o mesmo classificador cai de 0,816 para 0,752.
 - **Todas as variantes clássicas ficam entre 0,80 e 0,82**, no nível da ResNet-50 (0,825) e mais estáveis entre
@@ -344,7 +330,7 @@ menos 2 das 3 dobras.
 
 **Validação cruzada repetida (auditoria).** A tabela acima usa uma única divisão em 3 dobras, e as variantes diferem
 menos do que a oscilação entre dobras. Para ver se a ordem se mantém, a validação cruzada foi repetida com outras 4
-divisões por planta: 5 repetições × 3 dobras (`rocole_hough_treinar.py cv-repetida`). É uma auditoria: o modelo
+divisões por planta: 5 repetições × 3 dobras (`hough_treinar.py cv-repetida`). É uma auditoria: o modelo
 escolhido e os números do teste não mudam.
 
 | F1 de ferrugem, 5 repetições | Média | Menor e maior repetição | Diferença para a base | Repetições em que vence a base |
@@ -372,7 +358,7 @@ escolhido e os números do teste não mudam.
 Como o modelo clássico ficou abaixo da meta, a resposta final passou a ser a **média ponderada das probabilidades**
 do modelo de Hough e da ResNet-50: P = w · P(Hough) + (1 − w) · P(ResNet-50). Nenhum modelo é ajustado sobre as
 saídas da ResNet-50. Fora da dobra, cada foto é prevista pela ResNet-50 da sua dobra (`models/cv/`), que não viu a
-planta dela (as classes batem 100% com as gravadas por `rocole_cv.py`).
+planta dela (as classes batem 100% com as gravadas por `cnn_cv.py`).
 
 | Fora da dobra, F1 de ferrugem | Dobra 1 | Dobra 2 | Dobra 3 | Média |
 |---|---|---|---|---|
@@ -389,7 +375,7 @@ planta dela (as classes batem 100% com as gravadas por `rocole_cv.py`).
 
 ### Teste
 
-Uma vez por modelo (`src/rocole_hough_avaliar.py` para se o resultado já existe): 208 fotos, 81 com ferrugem, nas
+Uma vez por modelo (`src/hough_avaliar.py` para se o resultado já existe): 208 fotos, 81 com ferrugem, nas
 mesmas fotos do detector por regras e da ResNet-50. IC 95% por bootstrap de plantas. Configuração, peso da fusão e
 limiares vieram só de treino + validação.
 
@@ -430,7 +416,7 @@ Com as duas fotos, a fusão tem sensibilidade de 97,6% (IC 91,4% a 100%) e espec
 ### Opção de recusa ("mostre a um agrônomo")
 
 Como o modelo de 4 doenças do BRACOL, o detector pode **não responder** quando está em dúvida: a foto é
-recusada se P(ferrugem) cai numa faixa em volta do limiar (`src/rocole_hough_recusa.py`). Regra fixada antes de
+recusada se P(ferrugem) cai numa faixa em volta do limiar (`src/hough_recusa.py`). Regra fixada antes de
 rodar: fica a **menor** taxa de recusa cujo F1 de ferrugem nas fotos aceitas chega a 0,90, fora da dobra, com o
 limiar e a faixa de cada dobra escolhidos nas outras duas.
 
@@ -451,8 +437,7 @@ limiar e a faixa de cada dobra escolhidos nas outras duas.
   ferrugem e dá 9 alarmes em 106 sem ferrugem. Sem recusa, 0,879.
 - **As 29 recusadas** são 11 das 22 fotos de ácaro, 8 das 81 de ferrugem e 10 das 105 saudáveis: a recusa tira
   metade do ácaro, que é onde o modelo erra.
-- Antes de fixar a regra eu já tinha visto a curva de recusa fora da dobra (sem aninhar); o teste não tinha sido
-  olhado.
+- A curva de recusa fora da dobra (sem aninhar) já tinha sido vista antes de a regra ser fixada; o teste, não.
 
 ### A meta de 0,90
 
@@ -467,8 +452,8 @@ limiar e a faixa de cada dobra escolhidos nas outras duas.
 ### Em que folhas o detector foi medido
 
 O detector das seções acima (a fusão) foi **treinado só no RoCoLe** e medido em dois conjuntos, de duas espécies,
-dois países e dois tipos de foto. O modelo treinado no BRACOL está na
-[seção seguinte](#treino-e-teste-por-conjunto---dataset).
+dois países e dois tipos de foto. O modelo treinado no BRACOL está no
+[relatório final](RELATORIO_FINAL.md#primeiro-passo-saudável-ou-doença).
 
 | | RoCoLe | BRACOL |
 |---|---|---|
@@ -488,72 +473,11 @@ Números da fusão, respondendo a todas as fotos (sem a recusa).
 - **O que não foi medido:** arábica fotografada na planta (os dois conjuntos não têm essa combinação) e folhas de
   outras regiões além dessas duas.
 
-### Treino e teste por conjunto (`--dataset`)
-
-Os comandos de treino e de teste aceitam `--dataset rocole|bracol` (ou os atalhos `--rocole` e `--bracol`). Sem a
-opção, é o RoCoLe, e nada do que está acima muda. O código é o mesmo: só mudam as fotos, as classes e a divisão
-(`src/rocole_hough_dados.py`). **Cada conjunto tem o seu modelo, treinado e testado nele mesmo; os dois não são
-juntados.**
-
-| Treino | Teste | Modelo gravado | Resultados |
-|---|---|---|---|
-| RoCoLe (treino + validação, 1.271 fotos) | RoCoLe (208 fotos) | `models/rocole_hough.joblib` | `outputs/hough/` |
-| BRACOL (treino + validação, 1.200 folhas) | BRACOL (201 folhas) | `models/bracol_hough.joblib` | `outputs/hough_bracol/` |
-
-```bash
-python -P src/rocole_hough_treinar.py mascaras --bracol   # SAM acha a folha em cada foto (GPU)
-python -P src/rocole_hough_treinar.py extrair --bracol    # circulos do Hough e atributos
-python -P src/rocole_hough_treinar.py cv --bracol         # validacao cruzada; resultados em outputs/hough_bracol/
-python -P src/rocole_hough_treinar.py final --bracol      # grava models/bracol_hough.joblib
-python -P src/rocole_hough_avaliar.py --bracol            # teste do BRACOL com o modelo do BRACOL, uma vez
-```
-
-- **BRACOL:** 1.401 folhas de arábica, com a divisão do modelo de 4 doenças (1.000 / 200 / 201, agrupada por pHash).
-  "Ferrugem" é toda folha com `rust = 1`, sozinha ou com outra doença; as classes são saudável (144 folhas), outra
-  doença sem ferrugem (652) e ferrugem (605). O SAM achou a folha nas 1.401 fotos.
-- No BRACOL é o **modelo de Hough sozinho**. A fusão com a ResNet-50 e a recusa existem só no RoCoLe (não há rede
-  treinada por dobra para as classes do BRACOL).
-
-Validação cruzada (F1 de ferrugem fora da dobra; mesmas variantes e mesma regra de escolha nos dois conjuntos):
-
-| Fora da dobra | RoCoLe | BRACOL |
-|---|---|---|
-| Base: círculos + folha | 0,816 | 0,919 |
-| Só a folha (**sem o Hough**) | 0,752 | 0,870 |
-| Variante escolhida | 0,824 (atributos ricos, floresta) | 0,939 (atributos ricos, média) |
-
-Teste, uma vez por modelo (F1 de ferrugem por foto; IC 95% por bootstrap de grupos):
-
-| | Treino RoCoLe → teste RoCoLe | Treino BRACOL → teste BRACOL |
-|---|---|---|
-| Fotos de teste (com ferrugem) | 208 (81) | 201 (86) |
-| **Modelo de Hough: F1** | **0,876** (0,761 a 0,941) | **0,949** (0,912 a 0,979) |
-| Sensibilidade | 0,963 (78 de 81) | 0,965 (83 de 86) |
-| Especificidade | 0,850 (19 alarmes em 127) | 0,948 (6 alarmes em 115) |
-| Saudáveis chamadas de ferrugem | 4 de 105 (3,8%) | 0 de 21 |
-| Outra lesão chamada de ferrugem | ácaro: 15 de 22 (68,2%) | outras doenças: 6 de 94 (6,4%) |
-| Fusão com a ResNet-50: F1 | 0,879 (0,774 a 0,934) | não há |
-| Fusão com recusa: F1 nas fotos aceitas | 0,935 (0,845 a 0,980), 86% das fotos | não há |
-
-- **No BRACOL o modelo passa de 0,90 sem fusão e sem recusa:** 0,949 no teste e 0,939 fora da dobra. Treinado com as
-  outras doenças, ele as separa da ferrugem: só 6 das 94 folhas com outra doença saem como ferrugem, e nenhuma
-  saudável.
-- **No RoCoLe fica abaixo de 0,90 respondendo a todas as fotos** (0,876 sozinho, 0,879 na fusão). O erro é o ácaro:
-  15 das 22 fotos de ácaro saem como ferrugem. Com a recusa, chega a 0,935 nas fotos aceitas.
-- **O Hough não é enfeite em nenhum dos dois:** sem os círculos, a base perde 0,064 no RoCoLe e 0,049 no BRACOL.
-- **Os dois números não se comparam diretamente.** São conjuntos diferentes: no BRACOL a folha está destacada, sobre
-  fundo claro, e a "outra lesão" são doenças com muitas fotos; no RoCoLe a folha está na planta e a "outra lesão" é o
-  ácaro, com 155 fotos e ruído de rótulo.
-
-Arquivos do BRACOL em `outputs/hough_bracol/`: `cv_resumo.csv`, `cv_oof.csv`, `decisao.json`, `resultados_teste.json`,
-`predicoes_teste.csv`, `teste_intervalos_confianca.csv`, `folhas_sam.csv`, `propostas_treino.jpg`, `app_exemplos.jpg`
-e os logs.
-
 ### Conferência externa: folhas do BRACOL
 
 Para saber o que esperar do modelo do RoCoLe fora do RoCoLe, o modelo pronto (fusão, com o SAM achando a folha na hora)
 rodou em folhas do BRACOL: café **arábica**, folha destacada sobre fundo claro
-(`rocole_hough_avaliar.py --conferencia-externa`). Foi feita antes de existir um modelo treinado no BRACOL.
+(`hough_avaliar.py --conferencia-externa`). Foi feita antes de existir um modelo treinado no BRACOL.
 **Nada foi ajustado nessas fotos.**
 
 | Grupo do BRACOL | Folhas | Chamadas de ferrugem | IC 95% |
@@ -567,7 +491,7 @@ rodou em folhas do BRACOL: café **arábica**, folha destacada sobre fundo claro
 - **Mas chama de ferrugem quase toda folha com lesão:** 88% das folhas com bicho-mineiro, phoma ou cercosporiose. O
   modelo só conhece saudável, ácaro e ferrugem; fora disso, "tem lesão" vira "ferrugem". E alarma em 13,9% das
   saudáveis de arábica (1% no teste do RoCoLe).
-- Leitura: fora do RoCoLe, o modelo responde "a folha tem lesão?", não "a lesão é ferrugem?".
+- Fora do RoCoLe, o modelo responde "a folha tem lesão?", não "a lesão é ferrugem?".
 - Com a faixa de recusa aplicada às mesmas probabilidades (`bracol_externo.csv`): nenhuma das 304 folhas com
   ferrugem fica incerta; das 144 saudáveis, 40 ficam incertas e 14 continuam "ferrugem"; das 150 com outra doença, 53
   ficam incertas e 96 continuam "ferrugem". A recusa reduz os alarmes, mas não resolve as outras doenças.
@@ -577,53 +501,6 @@ Arquivos em `outputs/hough/`: `cv_resumo.csv`, `cv_oof.csv`, `decisao.json`, `fu
 cada um), `folhas_teste_f1.csv`, `bracol_resumo.csv`, `bracol_externo.csv`, `bracol_exemplos.jpg`,
 `propostas_treino.jpg`, `cv_repetida.csv` e `cv_repetida_resumo.csv`, `recusa_cv.csv`, `recusa_resumo.csv`,
 `recusa_teste.json` (mais IC e predições) e os logs.
-
-## Aplicativo
-
-`app/app.py` é uma página local (Flask) que aplica o detector a fotos soltas, **sem máscara**: o contorno da folha é
-achado na hora pelo SAM, com um ponto no centro da foto (`src/rocole_hough_inferir.py`).
-
-O objetivo é detectar **ferrugem em qualquer folha de café**, independente da região, da espécie e do tipo de foto.
-Por isso o aplicativo não pede máscara nem um tamanho de foto e mede as lesões em relação ao tamanho da folha. O que
-já foi medido, e o que falta para chegar a "qualquer folha", está em [Limitações](#limitações).
-
-```bash
-python -P app/app.py                   # modelo do BRACOL (padrao); depois abra http://127.0.0.1:5000
-python -P app/app.py --modelo rocole   # modelo do RoCoLe: fusao com a ResNet-50 e resposta "Incerto"
-```
-
-- **O modelo padrão é o treinado no BRACOL** (`models/bracol_hough.joblib`): o modelo de Hough sozinho. É o de F1
-  mais alto no próprio teste (0,949) e o que separa a ferrugem das outras doenças. Mostra as classes Saudável, Outra
-  lesão e Ferrugem, e não tem a resposta "Incerto".
-- **`--modelo rocole`** usa o detector do RoCoLe (`models/rocole_hough.joblib`): a fusão com a ResNet-50 e a opção de
-  recusa. Mostra Saudável, Ácaro-vermelho e Ferrugem. **"Incerto"** sai quando a probabilidade de ferrugem fica entre
-  13% e 43%, e a página pede para mostrar a folha a um agrônomo.
-- O rodapé da página diz em que fotos o modelo carregado foi treinado. `--porta` troca a porta.
-- Envie uma ou mais fotos (JPG ou PNG, até 12 por vez), com a folha no centro. Fotos de qualquer tamanho e
-  orientação; a rotação do celular (EXIF) é corrigida.
-- Para cada foto: o veredito, as três probabilidades e a foto com o contorno da folha e os círculos do Hough, do
-  azul (não parece ferrugem) ao vermelho (parece). Com `--modelo rocole`, também a parte de cada modelo na fusão. Um
-  aviso aparece quando o SAM não acha a folha (o contorno sai da cor) ou quando nenhum círculo é encontrado.
-- Os envios são analisados um por vez: dois cliques seguidos em "Analisar" esperam na fila (antes, chegavam juntos
-  ao modelo e derrubavam a carga do SAM).
-- Precisa do modelo escolhido em `models/` e do SAM (~375 MB, baixado na primeira vez). Com `--modelo rocole`,
-  também dos pesos `models/rocole_resnet50.pt` (sem eles, responde só o modelo de Hough, com o limiar
-  dele, e avisa). `--sem-sam` e `--sem-resnet` desligam essas partes.
-- Tempos medidos com o modelo do RoCoLe numa RTX 4050: a primeira análise carrega os modelos (27 s para 4 fotos);
-  depois, cerca de 1,5 s por foto. O modelo do BRACOL não carrega a ResNet-50. Sem GPU deve rodar, mais devagar (não
-  foi testado). Só atende a própria máquina.
-- **Conferido com o modelo padrão**, pela rota da página, em 12 fotos dos conjuntos de teste sorteadas com semente
-  fixa (2 por classe de cada conjunto). As 6 do BRACOL saíram certas (2 com ferrugem, 2 com outra doença, 2
-  saudáveis). Das 6 do RoCoLe, fotos de campo que esse modelo nunca viu: as 2 com ferrugem saíram "Ferrugem", as 2
-  de ácaro saíram "Sem ferrugem" (como "Outra lesão") e **1 das 2 saudáveis saiu "Ferrugem"** (81%). Exemplo em
-  `outputs/hough_bracol/app_exemplos.jpg`. São 12 fotos: servem para ver o aplicativo funcionando, não para medir.
-- Conferido com `--modelo rocole`: duas folhas de ferrugem do BRACOL saíram "Ferrugem" (97% e 96%), uma saudável
-  saiu "Sem ferrugem" (6%), uma imagem que não é folha saiu "Sem ferrugem" com aviso, e um arquivo de texto foi
-  recusado com mensagem. Uma folha saudável do BRACOL com 24% de probabilidade saiu "Incerto", e dois envios ao
-  mesmo tempo responderam os dois. Exemplos da página em `outputs/hough/app_exemplo.jpg` e `app_incerto.jpg`.
-
-> O aplicativo é um **apoio à decisão**. Cada modelo foi medido só no tipo de foto em que foi treinado; em outro
-> tipo de foto, o que se viu foram mais alarmes. Um "Ferrugem" pede conferência de um agrônomo.
 
 ## Limitações
 
@@ -642,8 +519,6 @@ python -P app/app.py --modelo rocole   # modelo do RoCoLe: fusao com a ResNet-50
 - **Rótulos.** O RoCoLe tem ruído conhecido (13 cópias com rótulos conflitantes) e talvez outros que a comparação de
   imagens não detecta. Em nenhum dos dois conjuntos há rótulo por lesão: cada círculo herda a classe da foto, então
   um círculo sobre uma parte sadia de uma folha com ferrugem conta como ferrugem no treino.
-- **Sem severidade.** Os níveis de ferrugem não vêm na versão do RoCoLe do Kaggle, e no BRACOL este detector só
-  responde se há ferrugem (a severidade fica com o modelo de 4 doenças).
 
 **Modelo**
 
@@ -653,8 +528,6 @@ python -P app/app.py --modelo rocole   # modelo do RoCoLe: fusao com a ResNet-50
   média de 5 divisões, o modelo de Hough sozinho cai de 0,824 para 0,807.
 - **Ácaro e ferrugem não são separados no RoCoLe:** 15 das 22 fotos de ácaro do teste saem como "ferrugem". São só
   155 fotos de ácaro, com ruído de rótulo entre as duas classes.
-- **No BRACOL não há fusão nem recusa.** O modelo responde a todas as folhas, sem "Incerto". "Ferrugem" inclui as
-  folhas com ferrugem e outra doença junto, e o modelo não diz qual é a outra doença.
 - **O Hough procura círculos.** Lesões grandes que se juntaram, lesões alongadas (como a mina do bicho-mineiro) e
   lesões na borda da folha só podem ser aproximadas por vários círculos; quanto se perde com isso não foi medido em
   separado. São no máximo 60 círculos por folha, com raio de 4 a 48 px numa folha levada a 700 px de lado: pontos
@@ -663,63 +536,8 @@ python -P app/app.py --modelo rocole   # modelo do RoCoLe: fusao com a ResNet-50
   se há várias folhas, o contorno sai errado e os atributos também. Quando o SAM não acha a folha, o contorno vem da
   cor, que é pior com fundo de campo.
 
-**Aplicativo**
-
-- **O modelo padrão foi treinado em folhas destacadas sobre fundo claro.** Em fotos tiradas na planta o esperado são
-  mais alarmes (1 das 2 folhas saudáveis de campo da conferência saiu como ferrugem), e esse uso não foi medido além
-  dessas 6 fotos. O objetivo de servir a qualquer folha ainda não foi demonstrado.
-- Com `--modelo rocole`, a foto é deitada e cortada no centro em 16:9 para a ResNet-50, como no treino; fotos muito
-  diferentes disso perdem parte da folha nessa metade da fusão.
-- Roda só na própria máquina, uma foto por vez, e foi testado só com GPU (RTX 4050).
-
-## Trabalhos futuros
-
-- **Um modelo único para qualquer folha.** Juntar RoCoLe, BRACOL e outros conjuntos num só treino, e medir deixando
-  um conjunto inteiro de fora a cada vez. Neste trabalho cada conjunto ficou com o seu modelo.
-- **Fotos do uso real.** Coletar e rotular arábica fotografada na planta, de outras lavouras e regiões, para medir o
-  aplicativo onde ele será usado e escolher o limiar para esse tipo de foto.
-- **Fusão e recusa no BRACOL.** Treinar uma rede por dobra com as classes do BRACOL para ter, nesse conjunto, a
-  mesma fusão e a resposta "Incerto" do RoCoLe.
-- **Ácaro contra ferrugem.** Mais fotos de ácaro, revisão dos rótulos em conflito e atributos próprios do verso da
-  folha, onde a ferrugem esporula.
-- **Rótulo por lesão e severidade.** Anotar círculos de algumas centenas de folhas para treinar o primeiro nível com
-  rótulo de verdade, e estimar a severidade pela fração da folha coberta por círculos de ferrugem.
-- **Aplicativo.** Versão para celular e sem GPU (um segmentador mais leve que o SAM), várias folhas por foto e
-  diagnóstico pela planta, juntando as fotos de várias folhas.
-
-## Estrutura
-
-Caminhos relativos à raiz do repositório. Os dados ficam em `data/`.
-
-| Caminho | Conteúdo |
-|---|---|
-| `src/rocole_comum.py` | caminhos e constantes |
-| `src/rocole_preparar.py` | remove cópias, cache 512×288, divisão agrupada por planta |
-| `src/rocole_modelo.py`, `src/rocole_treinar.py` | dataset, ResNet-50 (ou ConvNeXt-Tiny), treino |
-| `src/rocole_avaliar.py`, `src/rocole_gradcam.py` | métricas, IC por planta, matriz de confusão, Grad-CAM |
-| `src/rocole_validacao.py` | deslocamentos por classe e diagnóstico pela folha inteira (escolhidos na validação; `--teste` pontua a folha inteira no teste) |
-| `src/rocole_regras.py` | detector de ferrugem por regras (réplica de Rodriguez-Gallo et al., 2023) |
-| `src/rocole_folha.py` | segmenta a folha-alvo com o SAM e cria os caches recortados |
-| `src/rocole_cv.py` | validação cruzada por planta para comparar foto inteira e recortes |
-| `src/rocole_hough.py` | da foto aos círculos do Hough e aos atributos (contorno, escala, mapa de lesão, LBP, GLCM) |
-| `src/rocole_hough_treinar.py` | extração em lote, modelo de dois níveis, validação cruzada, fusão com a ResNet-50, modelo final |
-| `src/rocole_hough_avaliar.py` | teste de cada conjunto com o modelo dele (uma vez por modelo), folha inteira e conferência externa no BRACOL |
-| `src/rocole_hough_inferir.py` | aplica o modelo a uma foto solta, sem máscara (SAM na hora) |
-| `src/rocole_hough_recusa.py` | opção de recusa: escolhe a taxa fora da dobra e pontua no teste, uma vez |
-| `src/rocole_hough_dados.py` | os conjuntos que o detector sabe usar (`--dataset rocole` ou `bracol`): fotos, classes, divisão, pastas |
-| `app/app.py`, `app/templates/` | aplicativo local (Flask) |
-| `tests/` | testes (`unittest`) |
-| `models/rocole_resnet50.pt` | pesos do modelo final |
-| `models/rocole_resnet50.json` | SHA-256 do `metadados.csv` usado no treino |
-| `models/cv/` | pesos dos 9 modelos da validação cruzada (fora do git) |
-| `models/rocole_hough.joblib` | modelo de Hough (dois níveis), peso e limiar da fusão, faixa de recusa |
-| `models/bracol_hough.joblib` | o mesmo modelo de Hough treinado no BRACOL (o padrão do aplicativo) |
-| `outputs/hough/`, `outputs/hough_bracol/` | validação cruzada e teste do detector com o Hough: RoCoLe e BRACOL |
-| `outputs/` | divisão, descartes, `comparacao_modelos.csv`, segmentação e uma pasta por etapa |
-| `docs/specs/`, `docs/plans/` | desenhos e planos: os de 2026-11-11 (ResNet-50, escritos antes da mudança para esta pasta, com os caminhos antigos `src/` e `outputs/rocole/`) e os de 2026-11-13 (Hough e aplicativo) |
-| `data/archive.zip` | zip do Kaggle (fora do git) |
-| `data/cache_rocole_*`, `data/mascaras_rocole/` | caches 512×288 e máscaras do SAM (gerados, fora do git) |
-| `data/cache_rocole_hough/` | atributos dos círculos e máscaras de baixa confiança (gerados, fora do git) |
+As limitações do aplicativo, do modelo das doenças e da severidade estão no
+[relatório final](RELATORIO_FINAL.md#limitações), com os trabalhos futuros.
 
 ## Como reproduzir
 
@@ -732,44 +550,37 @@ rodam da raiz do repositório (no PowerShell: `$env:PYTHONPATH = "src"`):
 
 ```bash
 export PYTHONPATH=src
-python -P src/rocole_preparar.py         # remove copias, cria o cache 512x288 e divide por planta
-python -P src/rocole_treinar.py          # ResNet-50; grava models/rocole_resnet50.pt (--modelo convnext_tiny)
-python -P src/rocole_avaliar.py          # metricas, IC e Grad-CAM em outputs/resnet50/ (pontua o teste)
-python -P src/rocole_validacao.py        # deslocamentos por classe e folha inteira (so validacao)
-python -P src/rocole_validacao.py --teste  # folha inteira no teste, uma vez, com o modelo final
-python -P src/rocole_regras.py ajustar   # detector por regras: escolhe parametros no treino (CPU, ~2 min)
-python -P src/rocole_regras.py testar    # pontua o teste uma vez e compara com a ResNet-50
-python -P src/rocole_folha.py            # SAM: mascaras da folha-alvo e caches recortados (~25 min; baixa ~375 MB)
-python -P src/rocole_regras.py ajustar --mascara  # regras so dentro da folha (treino e validacao)
-python -P src/rocole_cv.py               # 3 dobras x 3 entradas (~1h45 numa RTX 4050; retoma se parar)
-python -P src/rocole_hough_treinar.py mascaras  # SAM nas fotos que rocole_folha.py recusou (baixa confianca)
-python -P src/rocole_hough_treinar.py extrair   # circulos do Hough e atributos (CPU, ~2,5 min)
-python -P src/rocole_hough_treinar.py cv        # 10 variantes x 3 dobras (CPU, ~20 min); escolhe pela regra
-python -P src/rocole_hough_treinar.py final     # ajusta em treino + validacao; grava models/rocole_hough.joblib
-python -P src/rocole_hough_treinar.py fusao     # fusao com a ResNet-50, fora da dobra (usa models/cv/)
-python -P src/rocole_hough_avaliar.py           # modelo de Hough no teste, uma vez
-python -P src/rocole_hough_avaliar.py --fusao   # fusao no teste, uma vez
-python -P src/rocole_hough_avaliar.py --folhas  # F1 de ferrugem pela folha, das predicoes ja gravadas
-python -P src/rocole_hough_avaliar.py --conferencia-externa  # fusao do RoCoLe em folhas do BRACOL (~15 min)
-python -P src/rocole_hough_treinar.py cv-repetida  # auditoria: 5 repeticoes x 3 dobras (CPU, ~25 min; retoma se parar)
-python -P src/rocole_hough_recusa.py cv         # opcao de recusa: escolhe a taxa fora da dobra
-python -P src/rocole_hough_recusa.py teste      # recusa no teste, uma vez (das predicoes ja gravadas)
-# o mesmo modelo treinado e testado no BRACOL (precisa de data/bracol_raw e de outputs/hough_bracol/metadados.csv)
-python -P src/rocole_hough_treinar.py mascaras --bracol   # SAM nas 1.401 folhas (GPU, ~15 min)
-python -P src/rocole_hough_treinar.py extrair --bracol
-python -P src/rocole_hough_treinar.py cv --bracol
-python -P src/rocole_hough_treinar.py final --bracol      # grava models/bracol_hough.joblib
-python -P src/rocole_hough_avaliar.py --bracol            # teste do BRACOL, uma vez
-python -P app/app.py                            # aplicativo (modelo do BRACOL) em http://127.0.0.1:5000
-python -P app/app.py --modelo rocole            # aplicativo com o detector do RoCoLe (fusao e "Incerto")
-python -m unittest discover -s tests     # testes
+python -P src/preparar_rocole.py         # remove copias, cria o cache 512x288 e divide por planta
+python -P src/cnn_treinar.py          # ResNet-50; grava models/rocole_resnet50.pt (--modelo convnext_tiny)
+python -P src/cnn_avaliar.py          # metricas, IC e Grad-CAM em outputs/resnet50/ (pontua o teste)
+python -P src/cnn_validacao.py        # deslocamentos por classe e folha inteira (so validacao)
+python -P src/cnn_validacao.py --teste  # folha inteira no teste, uma vez, com o modelo final
+python -P src/regras.py ajustar   # detector por regras: escolhe parametros no treino (CPU, ~2 min)
+python -P src/regras.py testar    # pontua o teste uma vez e compara com a ResNet-50
+python -P src/folha_sam.py            # SAM: mascaras da folha-alvo e caches recortados (~25 min; baixa ~375 MB)
+python -P src/regras.py ajustar --mascara  # regras so dentro da folha (treino e validacao)
+python -P src/cnn_cv.py               # 3 dobras x 3 entradas (~1h45 numa RTX 4050; retoma se parar)
+python -P src/hough_treinar.py mascaras  # SAM nas fotos que folha_sam.py recusou (baixa confianca)
+python -P src/hough_treinar.py extrair   # circulos do Hough e atributos (CPU, ~2,5 min)
+python -P src/hough_treinar.py cv        # 10 variantes x 3 dobras (CPU, ~20 min); escolhe pela regra
+python -P src/hough_treinar.py final     # ajusta em treino + validacao; grava models/rocole_hough.joblib
+python -P src/hough_treinar.py fusao     # fusao com a ResNet-50, fora da dobra (usa models/cv/)
+python -P src/hough_avaliar.py           # modelo de Hough no teste, uma vez
+python -P src/hough_avaliar.py --fusao   # fusao no teste, uma vez
+python -P src/hough_avaliar.py --folhas  # F1 de ferrugem pela folha, das predicoes ja gravadas
+python -P src/hough_avaliar.py --conferencia-externa  # fusao do RoCoLe em folhas do BRACOL (~15 min)
+python -P src/hough_treinar.py cv-repetida  # auditoria: 5 repeticoes x 3 dobras (CPU, ~25 min; retoma se parar)
+python -P src/hough_recusa.py cv         # opcao de recusa: escolhe a taxa fora da dobra
+python -P src/hough_recusa.py teste      # recusa no teste, uma vez (das predicoes ja gravadas)
 ```
 
 Treinar de novo na GPU dá números próximos, mas não idênticos.
 
-Se os dados estiverem em outra pasta (por exemplo, num worktree do git, que não tem `data/`), aponte a variável de
-ambiente `ROCOLE_DADOS` para ela: `export ROCOLE_DADOS=/caminho/para/data` (no PowerShell:
-`$env:ROCOLE_DADOS = "C:\caminho\para\data"`).
+Se os dados estiverem em outra pasta, aponte a variável de ambiente `ROCOLE_DADOS` para ela:
+`export ROCOLE_DADOS=/caminho/para/data` (no PowerShell: `$env:ROCOLE_DADOS = "C:\caminho\para\data"`).
+
+O modelo do BRACOL, o modelo das doenças, o aplicativo e os testes estão em
+[Como reproduzir](RELATORIO_FINAL.md#como-reproduzir), no relatório final.
 
 ## Referências
 

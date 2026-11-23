@@ -1,0 +1,25 @@
+{
+  "n": 180,
+  "f1_macro": 0.8596322267649712,
+  "acerto_exato": 0.7833333333333333,
+  "acerto_mais_provavel": 0.9666666666666667,
+  "ic95": {
+    "f1_macro": [
+      0.81509663528092,
+      0.8990224030224933
+    ],
+    "acerto_exato": [
+      0.7206311593748038,
+      0.8444444444444444
+    ]
+  },
+  "versao": "v2",
+  "tipo": "floresta",
+  "nivel1_por_doenca": true,
+  "limiares": {
+    "miner": 0.42,
+    "rust": 0.52,
+    "phoma": 0.44,
+    "cercospora": 0.4
+  }
+}

@@ -23,4 +23,4 @@ completo_hough_100_20: F1 de ferrugem por dobra [0.749, 0.784, 0.721] | media 0.
                  completo_hough_100_20 0.7493 0.7836 0.7208    0.7512    0.22           0.7594         0.8086          0.8013              0.6888
 resnet50_foto (referencia, sem limiar) 0.8671 0.8471 0.7609    0.8251     NaN           0.8263         0.7881          0.9261              0.7822
 
-escolhida: rico_floresta | limiar 0.32 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-leaf-disease-model-81d025\rocole\outputs\hough\decisao.json
+escolhida: rico_floresta | limiar 0.32 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\hough\decisao.json

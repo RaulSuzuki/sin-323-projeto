@@ -1,0 +1,143 @@
+{
+  "versao": "v2",
+  "tipo": "floresta",
+  "nivel1_por_doenca": true,
+  "limiares": {
+    "miner": 0.42,
+    "rust": 0.52,
+    "phoma": 0.44,
+    "cercospora": 0.4
+  },
+  "variante": "rico",
+  "f1_macro_por_dobra": {
+    "atual_hgb": [
+      0.8433,
+      0.7985,
+      0.7889
+    ],
+    "por_doenca_floresta": [
+      0.8416,
+      0.8367,
+      0.7959
+    ],
+    "por_doenca_hgb": [
+      0.8337,
+      0.833,
+      0.7912
+    ],
+    "por_doenca_logistica": [
+      0.8316,
+      0.7958,
+      0.8118
+    ]
+  },
+  "fora_da_dobra": {
+    "n": 1077,
+    "f1_macro": 0.8349338992491415,
+    "acerto_exato": 0.7168059424326834,
+    "acerto_mais_provavel": 0.9294336118848654
+  },
+  "por_doenca": [
+    {
+      "doenca": "miner",
+      "positivos": 290,
+      "precisao": 0.8296,
+      "recall": 0.7724,
+      "f1": 0.8,
+      "ap": 0.8821
+    },
+    {
+      "doenca": "rust",
+      "positivos": 519,
+      "precisao": 0.9579,
+      "recall": 0.921,
+      "f1": 0.9391,
+      "ap": 0.9859
+    },
+    {
+      "doenca": "phoma",
+      "positivos": 301,
+      "precisao": 0.9283,
+      "recall": 0.9468,
+      "f1": 0.9375,
+      "ap": 0.9856
+    },
+    {
+      "doenca": "cercospora",
+      "positivos": 254,
+      "precisao": 0.6006,
+      "recall": 0.7402,
+      "f1": 0.6631,
+      "ap": 0.7148
+    }
+  ],
+  "regra": "adotada por hough_doencas.py comparar: substitui o atual so com media maior E vitoria em >= 2 das 3 dobras; o teste nao foi lido",
+  "anterior": {
+    "tipo": "hgb",
+    "limiares": {
+      "miner": 0.58,
+      "rust": 0.2,
+      "phoma": 0.78,
+      "cercospora": 0.4
+    },
+    "variante": "rico",
+    "f1_macro_por_dobra": {
+      "floresta": [
+        0.8343,
+        0.8043,
+        0.7866
+      ],
+      "hgb": [
+        0.8433,
+        0.7985,
+        0.7889
+      ],
+      "logistica": [
+        0.8258,
+        0.8163,
+        0.7869
+      ]
+    },
+    "fora_da_dobra": {
+      "n": 1077,
+      "f1_macro": 0.8219048012696326,
+      "acerto_exato": 0.7093779015784587,
+      "acerto_mais_provavel": 0.9229340761374187
+    },
+    "por_doenca": [
+      {
+        "doenca": "miner",
+        "positivos": 290,
+        "precisao": 0.8259,
+        "recall": 0.7034,
+        "f1": 0.7598,
+        "ap": 0.8257
+      },
+      {
+        "doenca": "rust",
+        "positivos": 519,
+        "precisao": 0.9393,
+        "recall": 0.9538,
+        "f1": 0.9465,
+        "ap": 0.9862
+      },
+      {
+        "doenca": "phoma",
+        "positivos": 301,
+        "precisao": 0.9426,
+        "recall": 0.9269,
+        "f1": 0.9347,
+        "ap": 0.9771
+      },
+      {
+        "doenca": "cercospora",
+        "positivos": 254,
+        "precisao": 0.6559,
+        "recall": 0.6378,
+        "f1": 0.6467,
+        "ap": 0.693
+      }
+    ],
+    "regra": "o classificador substitui a base so com media maior E vitoria em >= 2 das 3 dobras"
+  }
+}

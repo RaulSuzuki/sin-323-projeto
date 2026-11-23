@@ -15,5 +15,5 @@ healthy          0.943  0.941  0.972
 red_spider_mite  0.864  0.811  0.864
 rust             0.889  0.899  0.901
 area da folha (aceitas): mediana 0.244
-gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\folhas_sam.csv, C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\outputs\rocole\segmentacao_amostra.jpg, caches e mascaras
+gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\folhas_sam.csv, C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\segmentacao_amostra.jpg, caches e mascaras
 exit: 0

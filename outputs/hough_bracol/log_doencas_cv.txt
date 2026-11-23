@@ -1,0 +1,12 @@
+   floresta     hgb  logistica
+0    0.8343  0.8433     0.8258
+1    0.8043  0.7985     0.8163
+2    0.7866  0.7889     0.7869
+
+escolhido: hgb | limiares {'miner': 0.58, 'rust': 0.2, 'phoma': 0.78, 'cercospora': 0.4}
+    doenca  positivos  precisao  recall    f1    ap
+     miner        290     0.826   0.703 0.760 0.826
+      rust        519     0.939   0.954 0.946 0.986
+     phoma        301     0.943   0.927 0.935 0.977
+cercospora        254     0.656   0.638 0.647 0.693
+fora da dobra (1077 folhas com doenca): F1 macro 0.822, acerto exato 0.709, doenca mais provavel certa 0.923

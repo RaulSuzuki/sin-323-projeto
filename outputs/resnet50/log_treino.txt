@@ -29,5 +29,5 @@ Epoca 21/25 | treino perda 0.0730 acc 0.9792 | val perda 0.2971 acc 0.9381 F1 ma
 Epoca 22/25 | treino perda 0.0575 acc 0.9811 | val perda 0.2829 acc 0.9333 F1 macro 0.8898 | 63s
 Epoca 23/25 | treino perda 0.0455 acc 0.9915 | val perda 0.2699 acc 0.9238 F1 macro 0.8827 | 63s
 parada antecipada na epoca 23
-melhor epoca: 18 | val perda 0.2566 acc 0.9143 F1 macro 0.8641 | pesos: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\.claude\worktrees\rocole-dataset-gradcam-f2e856\models\rocole_resnet50.pt
+melhor epoca: 18 | val perda 0.2566 acc 0.9143 F1 macro 0.8641 | pesos: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\rocole_resnet50.pt
 exit: 0
