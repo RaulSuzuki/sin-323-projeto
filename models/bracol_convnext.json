@@ -1,0 +1,15 @@
+{
+  "metadados_sha256": "89884600995f658fa3eaf2c0bcd639777556202561bed9d5d33020e90079510e",
+  "melhor_epoca": 18,
+  "map_validacao_interna": 0.948239896867876,
+  "entrada": [
+    512,
+    256
+  ],
+  "doencas": [
+    "miner",
+    "rust",
+    "phoma",
+    "cercospora"
+  ]
+}

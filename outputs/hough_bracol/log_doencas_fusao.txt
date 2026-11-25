@@ -1,0 +1,13 @@
+   arvores  fusao_w0.25  fusao_w0.50  fusao_w0.75  convnext
+0   0.8270       0.8725       0.8614       0.8426    0.8623
+1   0.8421       0.8912       0.8853       0.8719    0.8627
+2   0.8063       0.8652       0.8627       0.8302    0.8497
+
+medias: {'arvores': 0.8251, 'fusao_w0.25': 0.8763, 'fusao_w0.50': 0.8698, 'fusao_w0.75': 0.8482, 'convnext': 0.8582}
+escolhida pela regra: fusao_w0.25
+    doenca  positivos  precisao  recall    f1    ap
+     miner        290     0.873   0.831 0.852 0.932
+      rust        519     0.949   0.967 0.958 0.993
+     phoma        301     0.967   0.963 0.965 0.993
+cercospora        254     0.707   0.819 0.759 0.819
+fora da dobra: F1 macro 0.883, acerto exato 0.781

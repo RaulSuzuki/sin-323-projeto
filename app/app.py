@@ -1,22 +1,17 @@
-"""Aplicativo local: envia fotos de folhas de cafe e mostra a classe de cada uma, com os circulos do Hough.
+"""Aplicativo local: envia fotos de folhas de cafe e mostra, para cada uma, se esta saudavel ou com doenca, quais
+doencas aparecem e a severidade, com os circulos do Hough desenhados na foto.
 
-Uso (na raiz do repositorio):  python -P app/app.py [--porta 5000] [--modelo bracol|rocole] [--sem-sam] [--sem-resnet]
+Uso (na raiz do repositorio):  python -P app/app.py [--porta 5000] [--sem-sam] [--sem-convnext]
 Depois abra http://127.0.0.1:5000 no navegador. So atende a propria maquina.
 
-As fotos nao precisam de mascara: o contorno da folha e achado na hora (hough_inferir.py). O modelo e o SAM
-sao carregados na primeira foto enviada.
+As fotos nao precisam de mascara: o contorno da folha e achado na hora (hough_inferir.py). Os modelos sao os do
+BRACOL (models/bracol_hough.joblib, models/bracol_doencas.joblib e models/bracol_convnext.pt), carregados na primeira
+foto enviada, com o SAM.
 
---modelo escolhe em que conjunto o modelo de Hough foi treinado:
-  bracol (padrao): models/bracol_hough.joblib, so o modelo de Hough (saudavel, outra doenca, ferrugem); com
-  models/bracol_doencas.joblib (hough_doencas.py), a etapa 2 separa as quatro doencas do BRACOL.
-  rocole: models/rocole_hough.joblib, com a fusao com a ResNet-50 (saudavel, acaro-vermelho, ferrugem; fotos de robusta
-  na planta).
-
-A resposta tem dois passos (ver classificar()): primeiro Saudavel ou Doenca (Doenca = soma das classes que nao sao
-saudavel); se for Doenca, aparecem a probabilidade de cada doenca (do modelo das doencas, se existir; senao, das
-classes do modelo de Hough) e a severidade estimada pela area da folha com lesao (nas faixas de area do BRACOL; ver
-severidade()). Quando nem Saudavel nem Doenca passa de LIMITE_INCERTO, a resposta e "incerto", com o palpite.
-Nenhuma doenca e privilegiada.
+A resposta tem dois passos (ver classificar()): primeiro Saudavel ou Doenca; se for Doenca, aparecem a probabilidade
+de cada doenca (modelo das doencas, em media com a ConvNeXt-Tiny) e a severidade estimada pela
+area da folha com lesao (ver severidade()). Quando nem Saudavel nem Doenca passa de LIMITE_INCERTO, a resposta e
+"incerto", com o palpite. Nenhuma doenca e privilegiada.
 """
 import argparse
 import base64
@@ -32,35 +27,30 @@ import numpy as np  # noqa: E402
 from flask import Flask, render_template, request  # noqa: E402
 from PIL import Image, ImageOps  # noqa: E402
 
+from comum import LIMITE_INCERTO, MODELOS  # noqa: E402
+
 LADO_PAGINA = 1100  # lado maior da foto anotada mostrada na pagina
 MAX_FOTOS = 12  # por envio
 MAX_BYTES = 80 * 1024 * 1024  # por envio
-NOMES = {"healthy": "Saudável", "red_spider_mite": "Ácaro-vermelho", "other": "Outra doença", "rust": "Ferrugem"}
-MODELO_PADRAO = "bracol"
-TREINADO_EM = {  # o que o rodape da pagina diz sobre o modelo carregado
-    "bracol": "Modelo treinado em folhas de café arábica destacadas, fotografadas sobre fundo claro (BRACOL); em "
-              "fotos tiradas na planta e em outras espécies o acerto é menor.",
-    "rocole": "Modelo treinado em fotos de café robusta tiradas na planta (RoCoLe); em outras espécies e tipos de "
-              "foto o acerto é menor.",
-}
-DICAS = {"other": "bicho-mineiro, mancha de phoma ou cercosporiose, sem ferrugem"}  # o que a classe junta
+NOMES = {"healthy": "Saudável", "disease": "Doença"}  # as classes do passo 1 (modelo de Hough do BRACOL)
+TREINADO_EM = ("Modelos treinados em folhas de café arábica destacadas, fotografadas sobre fundo claro (BRACOL); em "
+               "fotos tiradas na planta e em outras espécies o acerto é menor.")  # o rodape da pagina
 NOMES_DOENCAS = {"miner": "Bicho-mineiro", "rust": "Ferrugem", "phoma": "Mancha de phoma",
                  "cercospora": "Cercosporiose"}  # as do modelo das doencas (hough_doencas.py)
+ARTEFATO = MODELOS / "bracol_hough.joblib"  # passo 1
+ARTEFATO_DOENCAS = MODELOS / "bracol_doencas.joblib"  # passo 2 (com a ConvNeXt-Tiny, models/bracol_convnext.pt)
 
-# "incerto" quando nem Saudavel nem Doenca passa disto. Conferido fora da dobra, no treino + validacao (o teste nao foi
-# usado; outputs/hough_bracol/cv_oof.csv e outputs/hough/fusao_oof.csv), o mesmo para os dois modelos:
-# BRACOL: Saudavel x Doenca certo em 99,1% das fotos; 0,8% ficam "incerto" (acerto de 78% nelas, 99,2% nas outras);
-#         classe da doenca certa em 94,5% das doencas achadas.
-# RoCoLe (fusao): 95,8%; 3,8% ficam "incerto" (69% nelas, 96,8% nas outras); tipo certo em 81,9%.
-LIMITE_INCERTO = 0.60
+# LIMITE_INCERTO (comum.py, 60%): "incerto" quando nem Saudavel nem Doenca passa disto. Os numeros fora da dobra e no
+# teste estao em outputs/hough_bracol/resultados_teste.json.
 SAUDAVEL = "healthy"
-# cor de cada classe nos circulos desenhados na foto e na legenda (BGR). Com o modelo das doencas, cada doenca conhecida
-# tem a sua cor (circulos_doencas de hough_inferir.py); sem ele, as classes do modelo de Hough.
+# cor de cada classe nos circulos desenhados na foto e na legenda (BGR). Com o modelo das doencas, cada doenca tem a
+# sua cor (circulos_doencas de hough_inferir.py); sem ele, as classes do passo 1.
 CORES_CIRCULO = {"healthy": (230, 140, 40),  # azul
-                 "miner": (0, 200, 255), "other": (0, 200, 255), "red_spider_mite": (0, 200, 255),  # amarelo
+                 "miner": (0, 200, 255),  # amarelo
                  "rust": (40, 40, 230),  # vermelho
                  "phoma": (215, 60, 225),  # magenta
-                 "cercospora": (230, 225, 0)}  # ciano
+                 "cercospora": (230, 225, 0),  # ciano
+                 "disease": (0, 140, 255)}  # laranja (so sem o modelo das doencas)
 CINZA = (160, 160, 160)  # circulo sem probabilidades por classe
 
 # Severidade pela fracao da folha com lesao (area_lesao de hough_inferir.py), nas faixas de area com que o BRACOL foi
@@ -69,13 +59,9 @@ CINZA = (160, 160, 160)  # circulo sem probabilidades por classe
 SEVERIDADES = ["Saudável", "Muito baixa", "Baixa", "Alta", "Muito alta"]
 FAIXAS_SEVERIDADE = ["< 0,1%", "0,1 a 5%", "5 a 10%", "10 a 15%", "> 15%"]
 CORTES_SEVERIDADE = (0.001, 0.05, 0.10, 0.15)
-SEVERIDADE_SOBRE = {
-    "bracol": "Estimada pela parte da folha com cor de lesão, nas faixas de área em que o BRACOL foi rotulado. Na "
-              "validação do BRACOL (200 folhas), deu o nível rotulado em 83,5% das folhas e errou por no máximo um "
-              "nível em 98%; não foi medida no teste.",
-    "rocole": "Estimada pela parte da folha com cor de lesão, nas faixas de área do BRACOL (folhas destacadas). Em "
-              "fotos tiradas na planta não foi medida: use como indicação.",
-}
+SEVERIDADE_SOBRE = ("Estimada pela parte da folha com cor de lesão, nas faixas de área em que o BRACOL foi rotulado. "
+                    "Na validação do BRACOL (200 folhas), deu o nível rotulado em 83,5% das folhas e errou por no "
+                    "máximo um nível em 98%; não foi medida no teste.")
 
 
 def severidade(area):
@@ -84,14 +70,13 @@ def severidade(area):
 
 
 def classificar(p):
-    """{classe: probabilidade} -> {doenca (bool), p_saudavel, p_doenca, incerto, tipo}.
+    """{classe: probabilidade} -> {doenca (bool), p_saudavel, p_doenca, incerto}.
     Passo 1: Saudavel ou Doenca, pela maior das duas (P(Doenca) = 1 - P(saudavel)); incerto quando ela nao passa de
-    LIMITE_INCERTO. Passo 2: tipo = a classe de doenca mais provavel do modelo de Hough (so faz sentido se for Doenca)."""
+    LIMITE_INCERTO."""
     p_saudavel = float(p[SAUDAVEL])
     p_doenca = float(sum(v for c, v in p.items() if c != SAUDAVEL))
-    doencas = {c: v for c, v in p.items() if c != SAUDAVEL}
     return {"doenca": p_doenca > p_saudavel, "p_saudavel": p_saudavel, "p_doenca": p_doenca,
-            "incerto": bool(max(p_saudavel, p_doenca) < LIMITE_INCERTO), "tipo": max(doencas, key=doencas.get)}
+            "incerto": bool(max(p_saudavel, p_doenca) < LIMITE_INCERTO)}
 
 
 def por_doenca(p_doencas, limiares):
@@ -112,7 +97,7 @@ def cor_css(classe):
 
 def classes_dos_circulos(r):
     """As classes com que os circulos sao coloridos, na ordem da legenda: saudavel e cada doenca do modelo das doencas
-    (se ele pontua os circulos); senao, as classes do modelo de Hough."""
+    (se ele pontua os circulos); senao, as classes do passo 1."""
     if r.get("circulos_doencas") is not None and r.get("p_doencas"):
         return [SAUDAVEL, *r["p_doencas"]]
     return list(r["p"])
@@ -144,18 +129,6 @@ def desenhar_classes(img_bgr, r):
     return saida
 
 
-def caminho_modelo(nome):
-    """Arquivo do modelo de Hough treinado no conjunto `nome` (bracol ou rocole)."""
-    from hough_dados import carregar_conjunto
-    return carregar_conjunto(nome).artefato
-
-
-def caminho_doencas(nome):
-    """Arquivo do modelo das doencas do conjunto `nome` (hough_doencas.py; hoje so existe para o bracol). O
-    Diagnosticador ignora o caminho se o arquivo nao existe."""
-    return caminho_modelo(nome).with_name(f"{nome}_doencas.joblib")
-
-
 def ler_imagem(dados):
     """Bytes de um arquivo enviado -> foto BGR (uint8) em pe: aplica a rotacao do EXIF (fotos de celular) e leva
     transparencia e tons de cinza para 3 canais. ValueError se nao for uma imagem."""
@@ -179,22 +152,20 @@ def para_data_uri(img_bgr, lado=LADO_PAGINA):
     return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii")
 
 
-def criar_app(diagnosticador=None, usar_sam=True, usar_resnet=True, modelo=MODELO_PADRAO):
-    """Aplicativo Flask. diagnosticador: objeto com .diagnosticar(img_bgr); sem ele, o modelo de verdade (o do
-    conjunto `modelo`) e carregado na primeira foto."""
-    if modelo not in TREINADO_EM:
-        raise ValueError(f"modelo desconhecido: '{modelo}'. Use um de: {', '.join(TREINADO_EM)}")
+def criar_app(diagnosticador=None, usar_sam=True, usar_convnext=True):
+    """Aplicativo Flask. diagnosticador: objeto com .diagnosticar(img_bgr); sem ele, os modelos de verdade sao
+    carregados na primeira foto."""
     app = Flask(__name__)
-    app.context_processor(lambda: {"treinado_em": TREINADO_EM[modelo]})  # o rodape de todas as respostas
+    app.context_processor(lambda: {"treinado_em": TREINADO_EM})  # o rodape de todas as respostas
     app.config["MAX_CONTENT_LENGTH"] = MAX_BYTES
     estado = {"diag": diagnosticador}
-    trava = threading.Lock()  # uma foto por vez: carregar e usar os modelos (SAM, ResNet-50) nao e seguro em paralelo
+    trava = threading.Lock()  # uma foto por vez: carregar e usar os modelos (SAM, ConvNeXt) nao e seguro em paralelo
 
     def diag():
         if estado["diag"] is None:
             from hough_inferir import Diagnosticador
-            estado["diag"] = Diagnosticador(artefato=caminho_modelo(modelo), usar_sam=usar_sam, usar_resnet=usar_resnet,
-                                            doencas=caminho_doencas(modelo))
+            estado["diag"] = Diagnosticador(artefato=ARTEFATO, usar_sam=usar_sam, usar_convnext=usar_convnext,
+                                            doencas=ARTEFATO_DOENCAS)
         return estado["diag"]
 
     def analisar(nome, dados):
@@ -209,30 +180,23 @@ def criar_app(diagnosticador=None, usar_sam=True, usar_resnet=True, modelo=MODEL
             return {"nome": nome, "interno": True,
                     "erro": "falha interna ao analisar esta foto (o motivo está no terminal do aplicativo)"}
         k = classificar(r["p"])
-        detalhe = None
-        if r.get("p_resnet"):  # fusao: a classe mais provavel de cada parte
-            detalhe = {parte: (NOMES[c], p[c]) for parte, p in (("Modelo de Hough", r["p_hough"]),
-                                                               ("ResNet-50", r["p_resnet"])) for c in [max(p, key=p.get)]}
         sev = None
         if k["doenca"] and r.get("area_lesao") is not None:  # severidade so quando a resposta (ou o palpite) e Doenca
             nivel = severidade(r["area_lesao"])
             sev = {"nivel": nivel, "nome": SEVERIDADES[nivel], "area": r["area_lesao"],
                    "niveis": [{"nome": n, "faixa": f} for n, f in zip(SEVERIDADES, FAIXAS_SEVERIDADE)],
-                   "sobre": SEVERIDADE_SOBRE[modelo], "cautela": modelo == "rocole"}
-        # passo 2, so mostrado se for Doenca: uma probabilidade por doenca (modelo das doencas) ou, sem ele, as classes
-        # do modelo de Hough
+                   "sobre": SEVERIDADE_SOBRE}
+        # passo 2, so mostrado se for Doenca: uma probabilidade por doenca (modelo das doencas)
         doencas, provaveis = (por_doenca(r["p_doencas"], r["limiares_doencas"]) if r.get("p_doencas")
-                              else (None, [NOMES[k["tipo"]]]))
+                              else (None, []))
         return {"nome": nome, "erro": None, "doenca": k["doenca"], "incerto": k["incerto"], "limite": LIMITE_INCERTO,
                 "resposta": "Doença" if k["doenca"] else NOMES[SAUDAVEL],
                 "p_resposta": k["p_doenca"] if k["doenca"] else k["p_saudavel"],
                 "p_saudavel": k["p_saudavel"], "p_doenca": k["p_doenca"],
-                "doencas": doencas, "provaveis": provaveis,
-                "classes": [{"chave": c, "nome": NOMES[c], "p": v, "dica": DICAS.get(c), "escolhida": c == k["tipo"]}
-                            for c, v in r["p"].items()],
+                "doencas": doencas, "provaveis": provaveis, "com_convnext": bool(r.get("p_doencas_convnext")),
                 "legenda": [{"chave": c, "nome": NOMES.get(c) or NOMES_DOENCAS.get(c, c), "cor": cor_css(c)}
                             for c in classes_dos_circulos(r)],
-                "detalhe": detalhe, "n_circulos": len(r["circulos"]), "aviso": r["aviso"],
+                "n_circulos": len(r["circulos"]), "aviso": r["aviso"],
                 "imagem": para_data_uri(desenhar_classes(img, r)), "severidade": sev}
 
     def resumir(resultados):
@@ -243,8 +207,7 @@ def criar_app(diagnosticador=None, usar_sam=True, usar_resnet=True, modelo=MODEL
         doentes = [r for r in certos if r["doenca"]]
         nomes = []
         for r in validos:  # as doencas na ordem em que o modelo as mostra
-            for n in ([x["nome"] for x in r["doencas"]] if r["doencas"] else
-                      [c["nome"] for c in r["classes"] if c["chave"] != SAUDAVEL]):
+            for n in [x["nome"] for x in r["doencas"] or []]:
                 if n not in nomes:
                     nomes.append(n)
         return {"saudavel": len(certos) - len(doentes), "doenca": len(doentes),
@@ -282,18 +245,15 @@ def criar_app(diagnosticador=None, usar_sam=True, usar_resnet=True, modelo=MODEL
 def argumentos(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--porta", type=int, default=5000)
-    ap.add_argument("--modelo", choices=list(TREINADO_EM), default=MODELO_PADRAO,
-                    help="conjunto em que o modelo foi treinado (padrao: %(default)s); so o do rocole tem a fusao "
-                         "com a ResNet-50")
-    ap.add_argument("--sem-sam", action="store_true", help="contorno da folha so pela cor (mais rapido, pior no campo)")
-    ap.add_argument("--sem-resnet", action="store_true", help="responde so o modelo de Hough, sem a fusao")
+    ap.add_argument("--sem-sam", action="store_true", help="contorno da folha so pela cor (mais rapido, pior)")
+    ap.add_argument("--sem-convnext", action="store_true",
+                    help="quais doencas so pelas arvores, sem a ConvNeXt-Tiny (sem GPU, mais rapido)")
     return ap.parse_args(argv)
 
 
 def main(argv=None):
     args = argumentos(argv)
-    criar_app(usar_sam=not args.sem_sam, usar_resnet=not args.sem_resnet, modelo=args.modelo).run(
-        host="127.0.0.1", port=args.porta)
+    criar_app(usar_sam=not args.sem_sam, usar_convnext=not args.sem_convnext).run(host="127.0.0.1", port=args.porta)
 
 
 if __name__ == "__main__":

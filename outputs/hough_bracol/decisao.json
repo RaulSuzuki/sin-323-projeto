@@ -1,19 +1,13 @@
 {
   "conjunto": "bracol",
-  "escolhida": "rico_media",
+  "escolhida": "completo",
   "param1": 60,
   "param2": 12,
-  "variante": "rico",
-  "nivel2": "media",
-  "limiar": 0.3,
-  "f1_media": 0.9390169326755625,
-  "aprovadas_pela_regra": [
-    "completo_floresta",
-    "completo_logistica",
-    "completo_media",
-    "rico",
-    "rico_floresta",
-    "rico_media"
-  ],
+  "variante": "completo",
+  "nivel2": "hgb",
+  "criterio": "F1 macro (saudavel x doenca)",
+  "limiar": 0.5,
+  "f1_media": 0.9715702537380299,
+  "aprovadas_pela_regra": [],
   "regra": "substitui a base 'completo' so com media maior E vitoria em >= 2 das 3 dobras; as variantes so_folha e so_circulos sao ablacoes e nao concorrem"
 }

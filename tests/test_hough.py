@@ -1,4 +1,4 @@
-"""Testes do pipeline de Hough do RoCoLe (hough.py): folha normalizada, mapa de lesao, circulos e atributos."""
+"""Testes do pipeline de Hough (hough.py): folha normalizada, mapa de lesao, circulos e atributos."""
 import unittest
 
 import cv2
@@ -192,7 +192,7 @@ class TestAtributosCirculos(unittest.TestCase):
 
     def test_mancha_redonda_e_mais_circular_que_um_risco(self):
         img, m = cena(manchas=[MANCHAS[0]])
-        cv2.line(img, (1070, 540), (1130, 540), LARANJA, 6)  # risco laranja, como o bronzeado do acaro nas nervuras
+        cv2.line(img, (1070, 540), (1130, 540), LARANJA, 6)  # risco laranja, como uma mancha ao longo da nervura
         folha = rh.normalizar_folha(img, m)
         mapa = rh.mapa_lesao(folha)
         x0, y0 = folha.caixa[:2]

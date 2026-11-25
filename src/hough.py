@@ -1,4 +1,4 @@
-"""Pipeline de Hough do RoCoLe: da foto de uma folha aos circulos candidatos a lesao e seus atributos.
+"""Pipeline de Hough: da foto de uma folha aos circulos candidatos a lesao e seus atributos.
 
 O mesmo codigo serve ao treino (hough_treinar.py) e ao aplicativo (hough_inferir.py):
 
@@ -7,21 +7,16 @@ O mesmo codigo serve ao treino (hough_treinar.py) e ao aplicativo (hough_inferir
   marrom) -> transformada de Hough de circulos sobre o mapa -> atributos de cada circulo e da folha inteira.
 
 Aqui o Hough e o detector de ONDE ha algo redondo e diferente do resto da folha. Dizer O QUE cada circulo e
-(ferrugem, acaro, reflexo, nervura) fica para o classificador treinado com os atributos (hough_treinar.py).
+(lesao, reflexo, nervura) fica para o classificador treinado com os atributos (hough_treinar.py).
 So funcoes puras, sem torch.
 """
-import sys
 from dataclasses import dataclass
 
 import cv2
 import numpy as np
 
-# Este arquivo se chamava rocole_hough.py; os modelos gravados antes da troca de nome (models/bracol_hough.joblib)
-# guardam MediaDeModelos como rocole_hough.MediaDeModelos. O apelido deixa esses modelos carregarem.
-sys.modules.setdefault("rocole_hough", sys.modules[__name__])
-
-LADO_FOLHA = 700  # raiz da area da folha depois de normalizar, em px (mediana do RoCoLe em 1920x1080: ~705)
-MARGEM = 0.10  # margem da caixa da folha, como em folha_sam.py
+LADO_FOLHA = 700  # raiz da area da folha depois de normalizar, em px
+MARGEM = 0.10  # margem da caixa da folha
 ESCALA_MIN, ESCALA_MAX = 0.2, 2.0
 RAIO_MIN, RAIO_MAX = 4, 48  # raio das lesoes, em px normalizados
 MAX_CIRCULOS = 60  # ficam os de mais votos
@@ -60,24 +55,6 @@ def mascara_vegetacao(img_bgr):
     cheia = np.zeros((h, w), np.uint8)
     cv2.drawContours(cheia, contornos, -1, 1, thickness=cv2.FILLED)
     return cheia.astype(bool)
-
-
-class MediaDeModelos:
-    """Media das probabilidades de varios classificadores ajustados nos mesmos dados (nivel 2 'media' de
-    hough_treinar.py). Fica neste modulo, que nunca roda como script, para que o modelo gravado com ela
-    possa ser carregado por qualquer programa (teste, aplicativo)."""
-
-    def __init__(self, modelos):
-        self.modelos = modelos
-
-    def fit(self, x, y):
-        for m in self.modelos:
-            m.fit(x, y)
-        self.classes_ = self.modelos[0].classes_
-        return self
-
-    def predict_proba(self, x):
-        return np.mean([m.predict_proba(x) for m in self.modelos], axis=0)
 
 
 def escolher_mascara_hough(mascaras, confiancas):

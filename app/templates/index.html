@@ -11,10 +11,10 @@
     :root {
       --papel: #f4efe4; --superficie: #fffdf8; --recuo: #f8f4ea; --tinta: #1d2a24; --suave: #58635c; --linha: #ded6c6;
       --trilho: #ebe5d8; --neutra: #7c877f;
-      --ferrugem: #b8461a; --sobre-ferrugem: #ffffff; --ferrugem-fundo: #f9e6da;
+      --alerta: #b8461a; --sobre-alerta: #ffffff; --alerta-fundo: #f9e6da;
       --folha: #0f6e62; --sobre-folha: #ffffff; --folha-fundo: #dff0ea; --folha-desenho: #1c6a50; --nervura: #7fb79f;
       --ocre: #8f6200; --sobre-ocre: #ffffff; --ocre-fundo: #f8edcd;
-      --outra: #6b4fa0; --sobre-outra: #ffffff; --doenca: #9e2b25; --sobre-doenca: #ffffff;
+      --doenca: #9e2b25; --sobre-doenca: #ffffff;
       --sombra: 0 1px 2px rgb(60 48 24 / .06), 0 10px 28px -18px rgb(60 48 24 / .28);
       --serifa: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
       --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
@@ -24,10 +24,10 @@
       :root {
         --papel: #131a16; --superficie: #1b231d; --recuo: #171f1a; --tinta: #e9eee7; --suave: #a7b2a9; --linha: #303b33;
         --trilho: #2a342d; --neutra: #8d9a90;
-        --ferrugem: #ef8a5c; --sobre-ferrugem: #2b1206; --ferrugem-fundo: #3a2118;
+        --alerta: #ef8a5c; --sobre-alerta: #2b1206; --alerta-fundo: #3a2118;
         --folha: #58c7b0; --sobre-folha: #06241e; --folha-fundo: #17332c; --folha-desenho: #2f8466; --nervura: #8fd0b4;
         --ocre: #e3b64f; --sobre-ocre: #2a1e02; --ocre-fundo: #352a10;
-        --outra: #b9a4e6; --sobre-outra: #1d1230; --doenca: #f28b82; --sobre-doenca: #2c0a08;
+        --doenca: #f28b82; --sobre-doenca: #2c0a08;
         --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 12px 28px -18px rgb(0 0 0 / .7);
       }
     }
@@ -94,7 +94,7 @@
 
     /* Mensagens */
     .erro, .aviso { border-radius: 9px; padding: 10px 14px; font-size: .94rem; border-left: 3px solid; }
-    .erro { background: var(--ferrugem-fundo); border-color: var(--ferrugem); }
+    .erro { background: var(--alerta-fundo); border-color: var(--alerta); }
     .aviso { background: var(--ocre-fundo); border-color: var(--ocre); }
     .mensagem { margin-top: 14px; }
 
@@ -124,9 +124,6 @@
                         font: 750 .72em/1 var(--sans); background: rgb(255 255 255 / .2); }
     .veredito.c-healthy { background: var(--folha); color: var(--sobre-folha); }
     .veredito.c-healthy::before { content: "\2713"; }
-    .veredito.c-other, .veredito.c-red_spider_mite { background: var(--outra); color: var(--sobre-outra); }
-    .veredito.c-rust { background: var(--ferrugem); color: var(--sobre-ferrugem); }
-    .veredito.c-other::before, .veredito.c-red_spider_mite::before, .veredito.c-rust::before { content: "!"; }
     .veredito.c-doenca { background: var(--doenca); color: var(--sobre-doenca); }
     .veredito.c-doenca::before { content: "!"; }
     .escolhida.c-doenca .barra span, .escolhida.c-dz .barra span { background: var(--doenca); }
@@ -144,12 +141,9 @@
     .barra span { display: block; height: 100%; background: var(--neutra); border-radius: 0 4px 4px 0; }
     .escolhida .linha { font-weight: 650; }
     .escolhida.c-healthy .barra span { background: var(--folha); }
-    .escolhida.c-other .barra span, .escolhida.c-red_spider_mite .barra span { background: var(--outra); }
-    .escolhida.c-rust .barra span { background: var(--ferrugem); }
     .nota { color: var(--suave); font-size: .85rem; line-height: 1.45; }
     .falha { padding: 18px 20px; display: grid; gap: 10px; }
     .palpite { font-size: .95rem; margin-top: 8px; }
-    .dica { display: block; color: var(--suave); font-size: .78rem; line-height: 1.35; }
 
     /* Severidade estimada pela area com lesao */
     .sev { display: grid; gap: 7px; padding-top: 13px; border-top: 1px solid var(--linha); }
@@ -158,7 +152,7 @@
     .escala li { background: var(--trilho); color: var(--suave); border-radius: 7px; padding: 6px 2px 5px; text-align: center;
                  display: grid; gap: 2px; align-content: center; font-size: .7rem; line-height: 1.2; }
     .escala b { color: var(--tinta); font-size: .74rem; font-weight: 650; font-variant-numeric: tabular-nums; }
-    .escala li.escolhido { background: var(--ferrugem); color: var(--sobre-ferrugem); }
+    .escala li.escolhido { background: var(--alerta); color: var(--sobre-alerta); }
     .escala li.sadio.escolhido { background: var(--folha); color: var(--sobre-folha); }
     .escala li.escolhido b { color: inherit; }
 
@@ -232,7 +226,7 @@
     {% if resultados|length > 1 %}
     <dl class="resumo">
       <div><dd>{{ resumo.saudavel }}</dd><dt>saudáve{% if resumo.saudavel == 1 %}l{% else %}is{% endif %}</dt></div>
-      <div><dd>{{ resumo.doenca }}</dd><dt>com doença{% if resumo.doenca %} ({% for t, n in resumo.tipos %}{{ n }} {{ t|lower }}{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}</dt></div>
+      <div><dd>{{ resumo.doenca }}</dd><dt>com doença{% if resumo.doenca and resumo.tipos %} ({% for t, n in resumo.tipos %}{{ n }} {{ t|lower }}{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}</dt></div>
       {% if resumo.incerto %}<div><dd>{{ resumo.incerto }}</dd><dt>incerta{% if resumo.incerto > 1 %}s{% endif %}</dt></div>{% endif %}
       {% if resumo.falhas %}<div><dd>{{ resumo.falhas }}</dd><dt>não analisada{% if resumo.falhas > 1 %}s{% endif %}</dt></div>{% endif %}
     </dl>
@@ -279,8 +273,8 @@
 
           {% if r.doenca %}
           <div class="tipos" aria-label="Doenças">
-            <div class="linha"><span>{% if r.provaveis|length > 1 %}Doenças mais prováveis{% else %}Doença mais provável{% endif %}</span><strong>{{ r.provaveis|join(" + ") }}</strong></div>
             {% if r.doencas %}
+            <div class="linha"><span>{% if r.provaveis|length > 1 %}Doenças mais prováveis{% else %}Doença mais provável{% endif %}</span><strong>{{ r.provaveis|join(" + ") }}</strong></div>
             <div class="classes">
               {% for x in r.doencas %}
               <div class="c-dz{% if x.provavel %} escolhida{% endif %}">
@@ -289,16 +283,9 @@
               </div>
               {% endfor %}
             </div>
-            <p class="nota">Uma probabilidade por doença: a folha pode ter mais de uma. O traço na barra é o limiar de cada doença.</p>
+            <p class="nota">Uma probabilidade por doença: a folha pode ter mais de uma. O traço na barra é o limiar de cada doença.{% if r.com_convnext %} Cada probabilidade é a média das árvores (círculos) com a ConvNeXt-Tiny (foto inteira).{% endif %}</p>
             {% else %}
-            <div class="classes">
-              {% for c in r.classes %}
-              <div class="c-{{ c.chave }}{% if c.escolhida %} escolhida{% endif %}">
-                <div class="linha"><span>{{ c.nome }}{% if c.dica %}<span class="dica">{{ c.dica }}</span>{% endif %}</span><span>{{ "%.0f"|format(c.p * 100) }}%</span></div>
-                <div class="barra"><span style="width: {{ "%.1f"|format(c.p * 100) }}%"></span></div>
-              </div>
-              {% endfor %}
-            </div>
+            <p class="aviso">Modelo das doenças indisponível: só o primeiro passo foi feito.</p>
             {% endif %}
           </div>
           {% endif %}
@@ -311,18 +298,13 @@
               <li class="{% if loop.first %}sadio{% endif %}{% if loop.index0 == s.nivel %} escolhido{% endif %}"><span>{{ n.nome }}</span><b>{{ n.faixa }}</b></li>
               {% endfor %}
             </ol>
-            <p class="nota">{{ ("%.1f"|format(s.area * 100))|replace(".", ",") }}% da folha com cor de lesão.{% if not s.cautela %} {{ s.sobre }}{% endif %}</p>
-            {% if s.cautela %}<p class="aviso">{{ s.sobre }}</p>{% endif %}
+            <p class="nota">{{ ("%.1f"|format(s.area * 100))|replace(".", ",") }}% da folha com cor de lesão. {{ s.sobre }}</p>
           </div>
           {% endif %}
 
           <p class="nota">Primeiro, saudável ou doença (a maior das duas). Se for doença, aparecem a probabilidade de cada
             doença e a mais provável. Quando nem saudável nem doença passa de {{ "%.0f"|format(r.limite * 100) }}%, a resposta
             é "incerto" e o palpite aparece acima.</p>
-          {% if r.detalhe %}
-          <p class="nota">Classe mais provável por parte:
-            {% for parte, (nome, valor) in r.detalhe.items() %}{{ parte }}, {{ nome|lower }} {{ "%.0f"|format(valor * 100) }}%{% if not loop.last %}; {% endif %}{% endfor %}.</p>
-          {% endif %}
           {% if r.aviso %}<p class="aviso">{{ r.aviso }}</p>{% endif %}
         </div>
       </div>

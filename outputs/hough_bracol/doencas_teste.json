@@ -1,25 +1,37 @@
 {
   "n": 180,
-  "f1_macro": 0.8596322267649712,
-  "acerto_exato": 0.7833333333333333,
-  "acerto_mais_provavel": 0.9666666666666667,
+  "f1_macro": 0.9079917137354546,
+  "acerto_exato": 0.8444444444444444,
+  "acerto_mais_provavel": 0.9777777777777777,
   "ic95": {
     "f1_macro": [
-      0.81509663528092,
-      0.8990224030224933
+      0.8707611309251082,
+      0.9402069254001997
     ],
     "acerto_exato": [
-      0.7206311593748038,
-      0.8444444444444444
+      0.7888888888888889,
+      0.9
     ]
   },
-  "versao": "v2",
-  "tipo": "floresta",
-  "nivel1_por_doenca": true,
+  "arvores_sozinhas": {
+    "n": 180,
+    "f1_macro": 0.8608125942684767,
+    "acerto_exato": 0.7555555555555555,
+    "acerto_mais_provavel": 0.9611111111111111
+  },
+  "fusao": {
+    "w": 0.25,
+    "limiares": [
+      0.66,
+      0.4,
+      0.54,
+      0.48
+    ]
+  },
   "limiares": {
-    "miner": 0.42,
-    "rust": 0.52,
-    "phoma": 0.44,
-    "cercospora": 0.4
+    "miner": 0.66,
+    "rust": 0.4,
+    "phoma": 0.54,
+    "cercospora": 0.48
   }
 }

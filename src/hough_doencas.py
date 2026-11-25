@@ -1,26 +1,22 @@
-"""Modelo das doencas do BRACOL: uma probabilidade por doenca, para a etapa 2 do aplicativo (folha com doenca).
+"""Passo 2 do aplicativo, quais doencas: uma probabilidade por doenca do BRACOL, para a folha com doenca.
 
-O modelo de Hough do BRACOL (hough_treinar.py) responde saudavel, outra doenca ou ferrugem: bicho-mineiro, mancha de
-phoma e cercosporiose ficam juntas em "outra doenca". Este modelo separa as quatro doencas. Uma folha pode ter mais de
-uma (os rotulos do BRACOL sao 0/1 por doenca), entao e um classificador por doenca (multirrotulo), cada um com o seu
-limiar.
+Uma folha pode ter mais de uma doenca (os rotulos do BRACOL sao 0/1 por doenca), entao ha um classificador por doenca
+(multirrotulo), cada um com o seu limiar; nenhuma doenca vale mais que outra. O modelo:
+- arvores: um gradient boosting por doenca, sobre os atributos do modelo de Hough (hough_treinar.montar_x, com as
+  pontuacoes dos circulos pelo nivel 1 dele) e o resumo de um nivel 1 por doenca (5 classes: saudavel e as quatro
+  doencas, treinado so com folhas de uma doenca);
+- a probabilidade final de cada doenca e a media com a ConvNeXt-Tiny (convnext_bracol.py), que ve a foto inteira:
+  PESO_ARVORES nas arvores e o resto na rede. Sem a rede, valem as arvores, com os limiares delas.
+Essa configuracao foi escolhida antes, na validacao cruzada (docs/RELATORIO_FINAL.md); aqui so ela e treinada. Treino
+e avaliacao usam so as folhas com pelo menos uma doenca.
 
-Os atributos sao os do modelo de Hough (hough_treinar.montar_x, na variante do modelo gravado), com as pontuacoes dos
-circulos pelo nivel 1. No treino, essas pontuacoes sao fora da dobra, por grupo, como no nivel 2 do modelo de Hough.
-Treino e avaliacao usam so as folhas com pelo menos uma doenca: a etapa 1 do aplicativo (saudavel ou doenca) continua
-com o modelo de Hough.
+Uso (na raiz do repositorio, com PYTHONPATH=src). Precisa do modelo de Hough do BRACOL (models/bracol_hough.joblib),
+do cache de atributos (hough_treinar.py extrair --bracol) e das previsoes fora da dobra da rede (convnext_bracol.py cv):
+  python -P src/hough_doencas.py cv     # fora da dobra (as 3 dobras do modelo de Hough): o limiar de cada doenca
+  python -P src/hough_doencas.py final  # ajusta em treino + validacao e grava models/bracol_doencas.joblib
+  python -P src/hough_doencas.py teste  # pontua o teste UMA vez (para se doencas_teste.json ja existe)
 
-Uso (na raiz do repositorio, com PYTHONPATH=src). Precisa do modelo de Hough do BRACOL (models/bracol_hough.joblib) e
-do cache de atributos do BRACOL (hough_treinar.py extrair --bracol):
-  python -P src/hough_doencas.py cv        # validacao cruzada no treino + validacao (as 3 dobras do modelo de Hough):
-                                            # escolhe o classificador e o limiar de cada doenca (a base)
-  python -P src/hough_doencas.py comparar  # so na validacao cruzada: + nivel 1 por doenca (5 classes), contra a base
-  python -P src/hough_doencas.py adotar    # se o nivel 1 por doenca passou a regra: nova decisao
-  python -P src/hough_doencas.py final     # ajusta em treino + validacao e grava models/bracol_doencas.joblib
-  python -P src/hough_doencas.py teste     # pontua o teste UMA vez (para se doencas_teste.json ja existe)
-
-Tudo e escolhido no treino + validacao; o teste so e lido pelo comando teste. Resultados em outputs/hough_bracol/
-(doencas_*). Sem models/bracol_doencas.joblib, o aplicativo mostra as classes do modelo de Hough na etapa 2.
+Resultados em outputs/hough_bracol/ (doencas_*).
 """
 import argparse
 import json
@@ -31,13 +27,19 @@ import pandas as pd
 
 import hough as rh
 import hough_treinar as ht
-from comum import MODELOS_ROCOLE, SEED
+from comum import MODELOS, SEED
 from hough_dados import DOENCAS_BRACOL, carregar_conjunto
 
 DOENCAS = list(DOENCAS_BRACOL)  # miner, rust, phoma, cercospora
-TIPOS = ("floresta", "hgb", "logistica")  # classificadores comparados na validacao cruzada; o primeiro e a base
-ARTEFATO = MODELOS_ROCOLE / "bracol_doencas.joblib"
+PESO_ARVORES = 0.25  # peso das arvores na media com a ConvNeXt-Tiny (0,75 na rede)
+ARTEFATO = MODELOS / "bracol_doencas.joblib"
 N_BOOTSTRAP = 1000
+
+
+def _esquema(modelo):
+    """(classes, classe positiva) do modelo de Hough em que os atributos se apoiam; sem as chaves, as do padrao
+    (hough_treinar.CLASSES e POSITIVA: saudavel ou doenca)."""
+    return list(modelo.get("classes") or ht.CLASSES), modelo.get("positiva", ht.POSITIVA)
 
 
 # ---------------------------------------------------------------- modelo
@@ -46,11 +48,12 @@ def com_doenca(meta):
     return meta[meta[DOENCAS].sum(axis=1) > 0]
 
 
-def ajustar_doencas(x, y, tipo="floresta"):
-    """Um classificador binario por doenca (hough_treinar._nivel2(tipo)). x: (n, k); y: (n, len(DOENCAS)) 0/1.
-    Doenca sem exemplos positivos e negativos no treino: um numero (a fracao de positivos), usado como probabilidade."""
+def ajustar_doencas(x, y, fabrica=ht.classificador):
+    """Um classificador binario por doenca (gradient boosting; os testes trocam, com poucas folhas). x: (n, k);
+    y: (n, len(DOENCAS)) 0/1. Doenca sem exemplos positivos e negativos no treino: um numero (a fracao de positivos),
+    usado como probabilidade."""
     y = np.asarray(y, int)
-    return [float(y[:, j].mean()) if len(np.unique(y[:, j])) < 2 else ht._nivel2(tipo).fit(x, y[:, j])
+    return [float(y[:, j].mean()) if len(np.unique(y[:, j])) < 2 else fabrica().fit(x, y[:, j])
             for j in range(y.shape[1])]
 
 
@@ -62,26 +65,46 @@ def prever_doencas(modelos, x):
     return p
 
 
+def montar_x(ids, dados, p_circ, p5, classes, positiva):
+    """Atributos das arvores: os do modelo de Hough (pontuacoes dos circulos pelo nivel 1 dele) e o resumo do nivel 1
+    por doenca (p5: id -> (N, 5))."""
+    return np.hstack([ht.montar_x(ids, dados, p_circ, classes, positiva), x_por_doenca(ids, dados, p5)])
+
+
 def prever_foto(modelo, dados_foto, p_circ):
-    """Uma foto ({"circulos", "at_circulos", "at_folha"}) e as pontuacoes (N, 3) dos seus circulos pelo nivel 1 do
-    modelo de Hough -> {doenca: probabilidade}. Usado pelo aplicativo (hough_inferir.py)."""
-    x = ht.montar_x(["foto"], {"foto": dados_foto}, {"foto": np.asarray(p_circ)}, modelo["variante"])
-    if modelo.get("nivel1_doencas") is not None:  # o resumo do nivel 1 por doenca, como no treino
-        dados = {"foto": dados_foto}
-        x = np.hstack([x, x_por_doenca(["foto"], dados, pontuar5(modelo["nivel1_doencas"], ["foto"], dados))])
+    """Uma foto ({"circulos", "at_circulos", "at_folha"}) e as pontuacoes (N, k) dos seus circulos pelo nivel 1 do
+    modelo de Hough -> {doenca: probabilidade das arvores}. Usado pelo aplicativo (hough_inferir.py)."""
+    dados = {"foto": dados_foto}
+    p5 = pontuar5(modelo["nivel1_doencas"], ["foto"], dados)
+    x = montar_x(["foto"], dados, {"foto": np.asarray(p_circ)}, p5, modelo["classes_hough"], modelo["positiva_hough"])
     return {d: float(v) for d, v in zip(modelo["doencas"], prever_doencas(modelo["modelos"], x)[0])}
 
 
-# ---------------------------------------------------------------- nivel 1 por doenca (experimento: hough_doencas.py comparar)
-# O nivel 1 do modelo de Hough so conhece saudavel / outra doenca / ferrugem, e os atributos "ricos" resumem os 5
-# circulos mais parecidos com ferrugem: numa folha com ferrugem e outra doenca, a outra some na media. Aqui, um nivel 1
-# com as 5 classes (saudavel e as 4 doencas), treinado so com circulos de folhas de rotulo unico (onde o rotulo fraco
-# "o circulo tem a doenca da folha" vale), e um resumo por classe: pontuacoes e como sao os 5 circulos mais parecidos
-# com cada uma.
+def media(p_arvores, p_convnext, w=PESO_ARVORES):
+    """A probabilidade final de cada doenca: w * arvores + (1 - w) * ConvNeXt-Tiny."""
+    return w * np.asarray(p_arvores, float) + (1.0 - w) * np.asarray(p_convnext, float)
+
+
+def combinar(modelo, p_arvores, p_convnext=None):
+    """As probabilidades finais e os limiares que valem para elas: com a rede, a media e os limiares da media; sem a
+    rede, as arvores, com os limiares delas. p_arvores, p_convnext: (n, 4) ou (4,). Devolve (p, limiares, usou_rede)."""
+    if p_convnext is None:
+        return np.asarray(p_arvores, float), np.asarray(modelo["limiares"], float), False
+    f = modelo["fusao"]
+    return media(p_arvores, p_convnext, f["w"]), np.asarray(f["limiares"], float), True
+
+
+# ---------------------------------------------------------------- nivel 1 por doenca
+# O nivel 1 do modelo de Hough so conhece saudavel / doenca. Aqui, um nivel 1 com as 5 classes (saudavel e as 4
+# doencas), treinado so com circulos de folhas de rotulo unico (onde o rotulo fraco "o circulo tem a doenca da folha"
+# vale), e um resumo por classe: pontuacoes e como sao os 5 circulos mais parecidos com cada uma.
 CLASSES5 = ["healthy"] + DOENCAS
+ATRIBUTOS_TOP5 = ["raio", "apoio", "croma", "mapa_media", "delta_L", "delta_a", "delta_b", "centro_L", "variancia",
+                  "blob_area", "blob_circularidade", "blob_alongamento"]
+_IDX_TOP5 = [rh.NOMES_CIRCULO.index(n) for n in ATRIBUTOS_TOP5]
 NOMES_POR_DOENCA = ["n_circulos"] + [f"{c}_{e}" for c in CLASSES5 for e in
                                      ["max", "top3", "top5", "media", "soma", "n_05", "frac_maior", "area"]
-                                     + [f"top5_{a}" for a in ht.ATRIBUTOS_RICOS]]
+                                     + [f"top5_{a}" for a in ATRIBUTOS_TOP5]]
 
 
 def rotulo_unico(meta):
@@ -125,19 +148,19 @@ def nivel1_por_doenca(base, dados, n_dobras=ht.N_INTERNAS):
     sgkf = StratifiedGroupKFold(n_splits=n_dobras, shuffle=True, random_state=SEED)
     p = {}
     for tr, va in sgkf.split(ids, rot.fillna("mista").to_numpy(), base["grupo"].to_numpy()):
-        p.update(pontuar5(ht._nivel1().fit(*_circulos_rotulados(ids[tr], rot, dados)), ids[va], dados))
-    return ht._nivel1().fit(*_circulos_rotulados(ids, rot, dados)), p
+        p.update(pontuar5(ht.classificador().fit(*_circulos_rotulados(ids[tr], rot, dados)), ids[va], dados))
+    return ht.classificador().fit(*_circulos_rotulados(ids, rot, dados)), p
 
 
 def estatisticas_por_doenca(p, at_circulos, raios, area_folha=rh.LADO_FOLHA ** 2):
     """Resumo dos circulos de uma foto, classe a classe (ordem de NOMES_POR_DOENCA): quantos circulos; para cada classe
     de CLASSES5, maximo, media dos 3 e dos 5 maiores, media e soma de P(classe), quantos passam de 0,5, fracao dos
-    circulos em que ela e a mais provavel, area pesada por P(classe) e a media de ATRIBUTOS_RICOS nos 5 circulos mais
+    circulos em que ela e a mais provavel, area pesada por P(classe) e a media de ATRIBUTOS_TOP5 nos 5 circulos mais
     parecidos com ela. Sem circulos: zeros."""
     p = np.asarray(p, np.float64).reshape(-1, len(CLASSES5))
     if not len(p):
         return np.zeros(len(NOMES_POR_DOENCA), np.float32)
-    at = np.asarray(at_circulos, np.float64)[:, ht._IDX_RICOS]
+    at = np.asarray(at_circulos, np.float64)[:, _IDX_TOP5]
     r = np.asarray(raios, np.float64)
     maior = p.argmax(1)
     saida = [len(p)]
@@ -154,35 +177,7 @@ def x_por_doenca(ids, dados, p5):
     return np.stack([estatisticas_por_doenca(p5[i], dados[i]["at_circulos"], dados[i]["circulos"][:, 2]) for i in ids])
 
 
-# ---------------------------------------------------------------- validacao cruzada
-def oof_doencas(meta, dados, variante, nomes, tipos=TIPOS, por_doenca=False):
-    """Probabilidades fora da dobra das folhas com doenca do treino + validacao, para cada tipo de classificador:
-    DataFrame id, dobra, grupo, y_<doenca>, p_<tipo>_<doenca>. As dobras sao as do modelo de Hough
-    (hough_treinar.dobras). O nivel 1 de cada dobra e ajustado nas folhas de treino da dobra, saudaveis tambem, como
-    no modelo de Hough; as folhas de treino sao pontuadas fora da dobra, e as de fora, pelo nivel 1 da dobra.
-    por_doenca: junta aos atributos o resumo do nivel 1 por doenca (nivel1_por_doenca), com o mesmo cuidado."""
-    d = ht.dobras(meta)
-    base = meta[meta["split"].isin(["train", "val"])].set_index("id").loc[d.index]
-    partes = []
-    for k in range(ht.N_DOBRAS):
-        tr, fora = base[(d != k).to_numpy()], base[(d == k).to_numpy()]
-        n1, p_tr = ht.ajustar_nivel1(tr.index, tr["classe"], tr["grupo"], dados, nomes)
-        tr_d, fora_d = com_doenca(tr), com_doenca(fora)
-        x_tr = ht.montar_x(list(tr_d.index), dados, p_tr, variante)
-        x_fora = ht.montar_x(list(fora_d.index), dados, ht._pontuar(n1, list(fora_d.index), dados), variante)
-        if por_doenca:
-            n1_5, p5_tr = nivel1_por_doenca(tr, dados)
-            x_tr = np.hstack([x_tr, x_por_doenca(list(tr_d.index), dados, p5_tr)])
-            x_fora = np.hstack([x_fora, x_por_doenca(list(fora_d.index), dados, pontuar5(n1_5, list(fora_d.index), dados))])
-        linha = {"id": fora_d.index.to_numpy(), "dobra": k, "grupo": fora_d["grupo"].to_numpy(),
-                 **{f"y_{dz}": fora_d[dz].to_numpy(int) for dz in DOENCAS}}
-        for tipo in tipos:
-            p = prever_doencas(ajustar_doencas(x_tr, tr_d[DOENCAS].to_numpy(int), tipo), x_fora)
-            linha.update({f"p_{tipo}_{dz}": p[:, j] for j, dz in enumerate(DOENCAS)})
-        partes.append(pd.DataFrame(linha))
-    return pd.concat(partes, ignore_index=True)
-
-
+# ---------------------------------------------------------------- metricas
 def escolher_limiares(y, p):
     """Limiar de cada doenca com o maior F1 (hough_treinar.escolher_limiar). y, p: (n, len(DOENCAS))."""
     return np.array([ht.escolher_limiar(y[:, j], p[:, j]) for j in range(y.shape[1])])
@@ -207,164 +202,93 @@ def metricas(y, p, limiares):
                  "acerto_mais_provavel": float(top.mean()) if len(top) else float("nan")}
 
 
-def _yp(oof, tipo):
-    return oof[[f"y_{dz}" for dz in DOENCAS]].to_numpy(int), oof[[f"p_{tipo}_{dz}" for dz in DOENCAS]].to_numpy()
-
-
-def f1_macro_por_dobra(oof, tipo):
+def f1_macro_por_dobra(y, p, dobra):
     """F1 macro de cada dobra, com os limiares escolhidos nas OUTRAS dobras (o numero honesto)."""
-    y, p = _yp(oof, tipo)
-    d = oof["dobra"].to_numpy()
-    return pd.Series({int(k): metricas(y[d == k], p[d == k], escolher_limiares(y[d != k], p[d != k]))[1]["f1_macro"]
-                      for k in sorted(np.unique(d))}, name=tipo)
+    return [metricas(y[dobra == k], p[dobra == k], escolher_limiares(y[dobra != k], p[dobra != k]))[1]["f1_macro"]
+            for k in sorted(np.unique(dobra))]
 
 
-def escolher_tipo(oof, tipos=TIPOS):
-    """Regra fixada antes de rodar (a mesma do modelo de Hough, hough_treinar.decidir): um classificador substitui a
-    base (tipos[0]) so se a media do F1 macro for maior E se vencer em pelo menos 2 das 3 dobras; entre os que passam,
-    o de maior media. Devolve (tipo escolhido, tabela dobras x tipos)."""
-    tab = pd.concat([f1_macro_por_dobra(oof, t) for t in tipos], axis=1)
-    passam = [t for t in tipos[1:] if ht.decidir(tab, tipos[0], t)]
-    return (max(passam, key=lambda t: tab[t].mean()) if passam else tipos[0]), tab
+# ---------------------------------------------------------------- validacao cruzada
+def oof_doencas(meta, dados, classes, positiva=ht.POSITIVA, fabrica=ht.classificador):
+    """Probabilidades das arvores fora da dobra para as folhas com doenca do treino + validacao: DataFrame id, dobra,
+    grupo, y_<doenca>, p_arvores_<doenca>. As dobras sao as do modelo de Hough (hough_treinar.dobras). Os niveis 1 de
+    cada dobra (o do modelo de Hough e o por doenca) sao ajustados nas folhas de treino da dobra, saudaveis tambem; as
+    folhas de treino sao pontuadas fora da dobra, e as de fora, pelos niveis 1 da dobra."""
+    d = ht.dobras(meta)
+    base = meta[meta["split"].isin(["train", "val"])].set_index("id").loc[d.index]
+    partes = []
+    for k in range(ht.N_DOBRAS):
+        tr, fora = base[(d != k).to_numpy()], base[(d == k).to_numpy()]
+        tr_d, fora_d = com_doenca(tr), com_doenca(fora)
+        ids_tr, ids_fora = list(tr_d.index), list(fora_d.index)
+        n1, p_tr = ht.ajustar_nivel1(tr.index, tr["classe"], tr["grupo"], dados, classes)
+        n1_5, p5_tr = nivel1_por_doenca(tr, dados)
+        x_tr = montar_x(ids_tr, dados, p_tr, p5_tr, classes, positiva)
+        x_fora = montar_x(ids_fora, dados, ht._pontuar(n1, ids_fora, dados, len(classes)),
+                          pontuar5(n1_5, ids_fora, dados), classes, positiva)
+        p = prever_doencas(ajustar_doencas(x_tr, tr_d[DOENCAS].to_numpy(int), fabrica), x_fora)
+        partes.append(pd.DataFrame({"id": fora_d.index.to_numpy(), "dobra": k, "grupo": fora_d["grupo"].to_numpy(),
+                                    **{f"y_{dz}": fora_d[dz].to_numpy(int) for dz in DOENCAS},
+                                    **{f"p_arvores_{dz}": p[:, j] for j, dz in enumerate(DOENCAS)}}))
+    return pd.concat(partes, ignore_index=True)
 
 
-def pred_honesta(oof, tipo):
-    """(y, predicao) 0/1 fora da dobra, com os limiares de cada dobra escolhidos nas OUTRAS dobras."""
-    y, p = _yp(oof, tipo)
-    d = oof["dobra"].to_numpy()
-    pred = np.zeros(y.shape, bool)
-    for k in np.unique(d):
-        pred[d == k] = p[d == k] >= escolher_limiares(y[d != k], p[d != k])
-    return y.astype(bool), pred
-
-
-def tabela_por_doenca(oof, tipo):
-    """Por doenca, com pred_honesta: F1, recall nas folhas so com ela e nas folhas com mais de uma doenca, e alarmes."""
-    y, pred = pred_honesta(oof, tipo)
-    mista = y.sum(1) > 1
-
-    def recall(m):
-        return float((pred_j & m).sum() / max(int(m.sum()), 1))
-
-    linhas = []
-    for j, dz in enumerate(DOENCAS):
-        yj, pred_j = y[:, j], pred[:, j]
-        linhas.append({"doenca": dz, "f1": ht._f1(yj, pred_j), "recall_so_ela": recall(yj & ~mista),
-                       "recall_com_outra": recall(yj & mista), "alarmes": int((~yj & pred_j).sum())})
-    return pd.DataFrame(linhas)
-
-
-def comparar(conj, hough=None, dados=None, tipos=TIPOS):
-    """Experimento, so na validacao cruzada (o teste nao e lido): os atributos atuais + o resumo do nivel 1 por doenca,
-    contra o modelo atual (doencas_cv_oof.csv, as mesmas dobras). Mesma regra de sempre: a alternativa substitui o atual
-    so com media do F1 macro maior E vitoria em pelo menos 2 das 3 dobras. Grava doencas_cv_por_doenca_oof.csv,
-    doencas_cv_por_doenca_resumo.csv e doencas_cv_por_doenca.json; nao mexe no modelo nem em doencas_decisao.json."""
-    arq_oof, arq_dec = conj.pasta / "doencas_cv_oof.csv", conj.pasta / "doencas_decisao.json"
-    if not arq_oof.exists() or not arq_dec.exists():
-        raise SystemExit(f"{arq_oof} ou {arq_dec} nao existe: rode hough_doencas.py cv")
-    atual = pd.read_csv(arq_oof, dtype={"id": str})
-    with open(arq_dec, encoding="utf-8") as f:
-        tipo_atual = json.load(f)["tipo"]
-    if hough is None:
-        hough, dados = _contexto(conj)
-    nova = oof_doencas(conj.meta, dados, hough["variante"], conj.classes, tipos, por_doenca=True)
-    if sorted(nova["id"].astype(str)) != sorted(atual["id"]):
-        raise SystemExit("as folhas da validacao cruzada nao batem com as de doencas_cv_oof.csv")
-    base = f"atual_{tipo_atual}"
-    tab = pd.concat([f1_macro_por_dobra(atual, tipo_atual).rename(base)]
-                    + [f1_macro_por_dobra(nova, t).rename(f"por_doenca_{t}") for t in tipos], axis=1)
-    passam = [c for c in tab.columns[1:] if ht.decidir(tab, base, c)]
-    escolhida = max(passam, key=lambda c: tab[c].mean()) if passam else base
-    melhor = max(tab.columns[1:], key=lambda c: tab[c].mean())
-    t_atual = tabela_por_doenca(atual, tipo_atual).assign(modelo=base)
-    t_nova = tabela_por_doenca(nova, melhor.removeprefix("por_doenca_")).assign(modelo=melhor)
-    conj.pasta.mkdir(parents=True, exist_ok=True)
-    nova.to_csv(conj.pasta / "doencas_cv_por_doenca_oof.csv", index=False)
-    tab.rename_axis("dobra").to_csv(conj.pasta / "doencas_cv_por_doenca_resumo.csv")
-    res = {"f1_macro_por_dobra": {c: tab[c].round(4).tolist() for c in tab}, "media": tab.mean().round(4).to_dict(),
-           "escolhida": escolhida, "substitui_o_atual": escolhida != base,
-           "por_doenca": pd.concat([t_atual, t_nova]).round(4).to_dict("records"),
-           "regra": "substitui o atual so com media maior E vitoria em >= 2 das 3 dobras; o teste nao foi lido"}
-    with open(conj.pasta / "doencas_cv_por_doenca.json", "w", encoding="utf-8") as f:
-        json.dump(res, f, indent=2, ensure_ascii=False)
-    print(tab.round(4).to_string())
-    print(f"\nmedias: {res['media']}\nescolhida pela regra: {escolhida} (substitui o atual: {res['substitui_o_atual']})")
-    print(pd.concat([t_atual, t_nova]).round(3).to_string(index=False))
-    return res
-
-
-# ---------------------------------------------------------------- comandos
 def _contexto(conj):
-    """Modelo de Hough gravado (variante, parametros do Hough) e os atributos do cache do conjunto."""
+    """Modelo de Hough gravado e os atributos do cache do conjunto."""
     if not conj.artefato.exists():
-        raise SystemExit(f"{conj.artefato} nao existe: rode hough_treinar.py cv e final --dataset {conj.nome}")
-    hough = joblib.load(conj.artefato)
-    return hough, ht.atributos_do_conjunto(conj, hough["param1"], hough["param2"])
+        raise SystemExit(f"{conj.artefato} nao existe: rode hough_treinar.py final --dataset {conj.nome}")
+    return joblib.load(conj.artefato), ht.atributos_do_conjunto(conj)
 
 
-def rodar_cv(conj, hough=None, dados=None, tipos=TIPOS):
-    """Validacao cruzada e escolha do classificador e dos limiares. Grava doencas_cv_oof.csv, doencas_cv_resumo.csv e
-    doencas_decisao.json em conj.pasta."""
+def rodar_cv(conj, hough=None, dados=None, cnn=None, fabrica=ht.classificador):
+    """Previsoes fora da dobra das arvores e da media com a ConvNeXt-Tiny, e o limiar de cada doenca (o de maior F1
+    fora da dobra), para as duas. cnn: id, p_<doenca> da rede fora da dobra (padrao: convnext_oof.csv, de
+    convnext_bracol.py cv). Grava doencas_cv_oof.csv e doencas_decisao.json em conj.pasta."""
     if hough is None:
         hough, dados = _contexto(conj)
-    oof = oof_doencas(conj.meta, dados, hough["variante"], conj.classes, tipos)
-    tipo, tab = escolher_tipo(oof, tipos)
-    y, p = _yp(oof, tipo)
-    limiares = escolher_limiares(y, p)
-    por_doenca, resumo = metricas(y, p, limiares)
+    if cnn is None:
+        arq_cnn = conj.pasta / "convnext_oof.csv"
+        if not arq_cnn.exists():
+            raise SystemExit(f"{arq_cnn} nao existe: rode convnext_bracol.py cv")
+        cnn = pd.read_csv(arq_cnn, dtype={"id": str})
+    classes, positiva = _esquema(hough)
+    oof = oof_doencas(conj.meta, dados, classes, positiva, fabrica)
+    cnn = cnn.astype({"id": str}).set_index("id")
+    faltam = set(oof["id"].astype(str)) - set(cnn.index)
+    if faltam:
+        raise SystemExit(f"a ConvNeXt-Tiny nao tem predicao fora da dobra para {len(faltam)} folhas: rode "
+                         "convnext_bracol.py cv")
+    y = oof[[f"y_{dz}" for dz in DOENCAS]].to_numpy(int)
+    p_arv = oof[[f"p_arvores_{dz}" for dz in DOENCAS]].to_numpy()
+    p_cnn = cnn.loc[oof["id"].astype(str), [f"p_{dz}" for dz in DOENCAS]].to_numpy()
+    p = media(p_arv, p_cnn)
+    oof = oof.assign(**{f"p_convnext_{dz}": p_cnn[:, j] for j, dz in enumerate(DOENCAS)},
+                     **{f"p_{dz}": p[:, j] for j, dz in enumerate(DOENCAS)})
+    limiares_arv, limiares = escolher_limiares(y, p_arv), escolher_limiares(y, p)
+    dobra = oof["dobra"].to_numpy()
+    resumo = {nome: {**metricas(y, pp, lim)[1], "f1_macro_por_dobra": [round(v, 4) for v in f1_macro_por_dobra(y, pp, dobra)]}
+              for nome, pp, lim in (("arvores", p_arv, limiares_arv), ("media", p, limiares))}
+    por_doenca = metricas(y, p, limiares)[0]
+    dec = {"peso_arvores": PESO_ARVORES, "limiares": dict(zip(DOENCAS, map(float, limiares))),
+           "limiares_arvores": dict(zip(DOENCAS, map(float, limiares_arv))), "fora_da_dobra": resumo,
+           "por_doenca": por_doenca.round(4).to_dict("records")}
     conj.pasta.mkdir(parents=True, exist_ok=True)
     oof.to_csv(conj.pasta / "doencas_cv_oof.csv", index=False)
-    tab.rename_axis("dobra").to_csv(conj.pasta / "doencas_cv_resumo.csv")
-    dec = {"tipo": tipo, "limiares": dict(zip(DOENCAS, map(float, limiares))), "variante": hough["variante"],
-           "f1_macro_por_dobra": {t: tab[t].round(4).tolist() for t in tab}, "fora_da_dobra": resumo,
-           "por_doenca": por_doenca.round(4).to_dict("records"),
-           "regra": "o classificador substitui a base so com media maior E vitoria em >= 2 das 3 dobras"}
     with open(conj.pasta / "doencas_decisao.json", "w", encoding="utf-8") as f:
         json.dump(dec, f, indent=2, ensure_ascii=False)
-    print(tab.round(4).to_string())
-    print(f"\nescolhido: {tipo} | limiares {dec['limiares']}")
+    for nome in ("arvores", "media"):
+        r = resumo[nome]
+        print(f"{nome}: F1 macro fora da dobra por dobra {r['f1_macro_por_dobra']} (limiares das outras dobras) | "
+              f"com os limiares escolhidos: F1 macro {r['f1_macro']:.3f}, acerto exato {r['acerto_exato']:.3f}")
+    print(f"limiares da media (peso {PESO_ARVORES} nas arvores): {dec['limiares']}")
     print(por_doenca.round(3).to_string(index=False))
-    print(f"fora da dobra ({resumo['n']} folhas com doenca): F1 macro {resumo['f1_macro']:.3f}, acerto exato "
-          f"{resumo['acerto_exato']:.3f}, doenca mais provavel certa {resumo['acerto_mais_provavel']:.3f}")
     return dec
 
 
-def adotar(conj):
-    """Adota o resultado de comparar, se a alternativa passou a regra: escolhe o limiar de cada doenca nas predicoes
-    fora da dobra dela e grava a nova decisao em doencas_decisao.json (a decisao anterior fica dentro dela, em
-    'anterior'). Depois: final e teste."""
-    arq_res, arq_oof = conj.pasta / "doencas_cv_por_doenca.json", conj.pasta / "doencas_cv_por_doenca_oof.csv"
-    arq_dec = conj.pasta / "doencas_decisao.json"
-    if not arq_res.exists() or not arq_oof.exists() or not arq_dec.exists():
-        raise SystemExit("rode hough_doencas.py cv e comparar antes")
-    with open(arq_res, encoding="utf-8") as f:
-        res = json.load(f)
-    with open(arq_dec, encoding="utf-8") as f:
-        anterior = json.load(f)
-    if anterior.get("nivel1_por_doenca"):
-        raise SystemExit("o nivel 1 por doenca ja foi adotado (doencas_decisao.json)")
-    if not res["substitui_o_atual"]:
-        raise SystemExit("a alternativa nao passou a regra em comparar: nada a adotar")
-    tipo = res["escolhida"].removeprefix("por_doenca_")
-    y, p = _yp(pd.read_csv(arq_oof, dtype={"id": str}), tipo)
-    limiares = escolher_limiares(y, p)
-    por_doenca, resumo = metricas(y, p, limiares)
-    dec = {"versao": "v2", "tipo": tipo, "nivel1_por_doenca": True, "limiares": dict(zip(DOENCAS, map(float, limiares))),
-           "variante": anterior["variante"], "f1_macro_por_dobra": res["f1_macro_por_dobra"], "fora_da_dobra": resumo,
-           "por_doenca": por_doenca.round(4).to_dict("records"),
-           "regra": "adotada por hough_doencas.py comparar: " + res["regra"], "anterior": anterior}
-    with open(arq_dec, "w", encoding="utf-8") as f:
-        json.dump(dec, f, indent=2, ensure_ascii=False)
-    print(f"adotado: nivel 1 por doenca + {tipo} | limiares {dec['limiares']}")
-    print(por_doenca.round(3).to_string(index=False))
-    print(f"fora da dobra: F1 macro {resumo['f1_macro']:.3f}, acerto exato {resumo['acerto_exato']:.3f}")
-    return dec
-
-
-def ajustar_final(conj, hough=None, dados=None, artefato=ARTEFATO):
-    """Ajusta o classificador escolhido em treino + validacao (folhas com doenca; pontuacoes dos circulos fora da
-    dobra, como no treino do nivel 2) e grava o modelo. Com o nivel 1 por doenca adotado (adotar), ajusta tambem esse
-    nivel 1 e o guarda no modelo, para o aplicativo e o teste pontuarem os circulos do mesmo jeito."""
+# ---------------------------------------------------------------- modelo final e teste
+def ajustar_final(conj, hough=None, dados=None, artefato=ARTEFATO, fabrica=ht.classificador):
+    """Ajusta os niveis 1 e os classificadores das doencas em treino + validacao (folhas com doenca; pontuacoes dos
+    circulos fora da dobra, como no treino do nivel 2) e grava o modelo, com os limiares de doencas_decisao.json."""
     arq = conj.pasta / "doencas_decisao.json"
     if not arq.exists():
         raise SystemExit(f"{arq} nao existe: rode hough_doencas.py cv")
@@ -372,23 +296,21 @@ def ajustar_final(conj, hough=None, dados=None, artefato=ARTEFATO):
         dec = json.load(f)
     if hough is None:
         hough, dados = _contexto(conj)
+    classes, positiva = _esquema(hough)
     tv = conj.meta[conj.meta["split"].isin(["train", "val"])].set_index("id")
-    _, p_tv = ht.ajustar_nivel1(tv.index, tv["classe"], tv["grupo"], dados, conj.classes)
+    _, p_tv = ht.ajustar_nivel1(tv.index, tv["classe"], tv["grupo"], dados, classes)
+    n1_5, p5_tv = nivel1_por_doenca(tv, dados)
     tv_d = com_doenca(tv)
-    x = ht.montar_x(list(tv_d.index), dados, p_tv, dec["variante"])
-    n1_5 = None
-    if dec.get("nivel1_por_doenca"):
-        n1_5, p5_tv = nivel1_por_doenca(tv, dados)
-        x = np.hstack([x, x_por_doenca(list(tv_d.index), dados, p5_tv)])
-    modelo = {"doencas": DOENCAS, "modelos": ajustar_doencas(x, tv_d[DOENCAS].to_numpy(int), dec["tipo"]),
-              "limiares": [float(dec["limiares"][d]) for d in DOENCAS], "tipo": dec["tipo"],
-              "nivel1_doencas": n1_5, "versao": dec.get("versao", "v1"),
-              "variante": dec["variante"], "param1": hough["param1"], "param2": hough["param2"],
-              "conjunto": conj.nome, "metadados_sha256": conj.sha256()}
+    x = montar_x(list(tv_d.index), dados, p_tv, p5_tv, classes, positiva)
+    modelo = {"doencas": DOENCAS, "modelos": ajustar_doencas(x, tv_d[DOENCAS].to_numpy(int), fabrica),
+              "nivel1_doencas": n1_5, "limiares": [float(dec["limiares_arvores"][d]) for d in DOENCAS],
+              "fusao": {"w": float(dec["peso_arvores"]), "limiares": [float(dec["limiares"][d]) for d in DOENCAS]},
+              "classes_hough": classes, "positiva_hough": positiva, "param1": hough["param1"],
+              "param2": hough["param2"], "conjunto": conj.nome, "metadados_sha256": conj.sha256()}
     artefato.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(modelo, artefato, compress=3)
-    print(f"modelo das doencas {modelo['versao']} ({dec['tipo']}" + (", com nivel 1 por doenca" if n1_5 is not None else "")
-          + f", {len(tv_d)} folhas com doenca de treino + validacao): {artefato}")
+    print(f"modelo das doencas ({len(tv_d)} folhas com doenca de treino + validacao; media com a ConvNeXt-Tiny, peso "
+          f"{modelo['fusao']['w']:.2f} nas arvores): {artefato}")
     return modelo
 
 
@@ -407,10 +329,18 @@ def _bootstrap(y, p, limiares, grupos, n=N_BOOTSTRAP, seed=SEED):
             "acerto_exato": [float(np.percentile(ex, 2.5)), float(np.percentile(ex, 97.5))]}
 
 
-def avaliar_teste(conj, hough=None, dados=None, artefato=ARTEFATO, n_bootstrap=N_BOOTSTRAP):
-    """Pontua as folhas com doenca do teste UMA vez, com o modelo gravado e o nivel 1 do modelo de Hough (o mesmo
-    caminho do aplicativo). Para se doencas_teste.json ja existe. Grava doencas_teste.json, doencas_teste_por_doenca.csv
-    e doencas_predicoes_teste.csv."""
+def _convnext_teste(meta):
+    """Probabilidades da ConvNeXt-Tiny final para as folhas de meta (a mesma rede do aplicativo)."""
+    import convnext_bracol as cb
+    cb.preparar_cache(meta.reset_index())
+    return cb.prever(cb.carregar(), meta.reset_index())
+
+
+def avaliar_teste(conj, hough=None, dados=None, artefato=ARTEFATO, n_bootstrap=N_BOOTSTRAP, convnext=None):
+    """Pontua as folhas com doenca do teste UMA vez, com o modelo gravado, o nivel 1 do modelo de Hough (o mesmo
+    caminho do aplicativo) e a ConvNeXt-Tiny final. Para se doencas_teste.json ja existe. Grava doencas_teste.json,
+    doencas_teste_por_doenca.csv e doencas_predicoes_teste.csv.
+    convnext: funcao meta -> (n, 4) (padrao: a rede gravada em models/bracol_convnext.pt)."""
     if not artefato.exists():
         raise SystemExit(f"{artefato} nao existe: rode hough_doencas.py final")
     modelo = joblib.load(artefato)
@@ -423,22 +353,26 @@ def avaliar_teste(conj, hough=None, dados=None, artefato=ARTEFATO, n_bootstrap=N
         hough, dados = _contexto(conj)
     te = com_doenca(conj.meta[conj.meta["split"] == "test"]).set_index("id")
     ids = list(te.index)
-    x = ht.montar_x(ids, dados, ht._pontuar(hough["nivel1"], ids, dados), modelo["variante"])
-    if modelo.get("nivel1_doencas") is not None:
-        x = np.hstack([x, x_por_doenca(ids, dados, pontuar5(modelo["nivel1_doencas"], ids, dados))])
-    p = prever_doencas(modelo["modelos"], x)
+    classes, positiva = _esquema(hough)
+    x = montar_x(ids, dados, ht._pontuar(hough["nivel1"], ids, dados, len(classes)),
+                 pontuar5(modelo["nivel1_doencas"], ids, dados), classes, positiva)
+    p_arv = prever_doencas(modelo["modelos"], x)
+    p_cnn = (convnext or _convnext_teste)(te)
+    p, limiares, _ = combinar(modelo, p_arv, p_cnn)
     y = te[DOENCAS].to_numpy(int)
-    por_doenca, resumo = metricas(y, p, modelo["limiares"])
-    resumo["ic95"] = _bootstrap(y, p, np.asarray(modelo["limiares"]), te["grupo"].to_numpy(), n_bootstrap)
+    por_doenca, resumo = metricas(y, p, limiares)
+    resumo["ic95"] = _bootstrap(y, p, limiares, te["grupo"].to_numpy(), n_bootstrap)
+    resumo["arvores_sozinhas"] = metricas(y, p_arv, modelo["limiares"])[1]  # so para descrever (nada e escolhido)
     conj.pasta.mkdir(parents=True, exist_ok=True)
     por_doenca.to_csv(conj.pasta / "doencas_teste_por_doenca.csv", index=False)
     pd.DataFrame({"id": ids, **{f"y_{d}": y[:, j] for j, d in enumerate(DOENCAS)},
-                  **{f"p_{d}": p[:, j] for j, d in enumerate(DOENCAS)}}).to_csv(
+                  **{f"p_{d}": p[:, j] for j, d in enumerate(DOENCAS)},
+                  **{f"p_arvores_{d}": p_arv[:, j] for j, d in enumerate(DOENCAS)},
+                  **{f"p_convnext_{d}": p_cnn[:, j] for j, d in enumerate(DOENCAS)}}).to_csv(
         conj.pasta / "doencas_predicoes_teste.csv", index=False)
     with open(saida, "w", encoding="utf-8") as f:
-        json.dump({**resumo, "versao": modelo.get("versao", "v1"), "tipo": modelo["tipo"],
-                   "nivel1_por_doenca": modelo.get("nivel1_doencas") is not None,
-                   "limiares": dict(zip(DOENCAS, modelo["limiares"]))}, f, indent=2)
+        json.dump({**resumo, "fusao": modelo["fusao"], "limiares": dict(zip(DOENCAS, map(float, limiares)))}, f,
+                  indent=2)
     print(por_doenca.round(3).to_string(index=False))
     print(f"teste ({resumo['n']} folhas com doenca): F1 macro {resumo['f1_macro']:.3f} (IC 95% "
           f"{resumo['ic95']['f1_macro'][0]:.3f} a {resumo['ic95']['f1_macro'][1]:.3f}), acerto exato "
@@ -448,11 +382,10 @@ def avaliar_teste(conj, hough=None, dados=None, artefato=ARTEFATO, n_bootstrap=N
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("etapa", choices=["cv", "comparar", "adotar", "final", "teste"])
+    ap.add_argument("etapa", choices=["cv", "final", "teste"])
     args = ap.parse_args(argv)
     conj = carregar_conjunto("bracol")
-    {"cv": rodar_cv, "comparar": comparar, "adotar": adotar, "final": ajustar_final,
-     "teste": avaliar_teste}[args.etapa](conj)
+    {"cv": rodar_cv, "final": ajustar_final, "teste": avaliar_teste}[args.etapa](conj)
 
 
 if __name__ == "__main__":

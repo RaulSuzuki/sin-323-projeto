@@ -1,13 +1,3 @@
---- Teste de 'bracol' (201 fotos, 86 com ferrugem) com o modelo de Hough treinado em 'bracol' (limiar 0.30) ---
-                     estimativa  IC95_inf  IC95_sup
-sensibilidade            0.9651    0.9213    1.0000
-especificidade           0.9478    0.9055    0.9832
-acuracia_balanceada      0.9565    0.9257    0.9818
-f1                       0.9486    0.9125    0.9785
-acuracia                 0.9552    0.9250    0.9803
-ferrugem achada: 83 de 86 | alarmes: 6 em 115
-fracao chamada de 'ferrugem' por classe do teste: {'healthy': 0.0, 'other': 0.064, 'rust': 0.965}
-classes (real nas linhas: healthy, other, rust | predito nas colunas: healthy, other, rust):
-[[21  0  0]
- [ 0 88  6]
- [ 1  2 83]]
+--- Teste de 'bracol' (201 folhas, 180 com doenca): passo 1, saudavel ou doenca ---
+acerto 0.990 (IC 95% 0.975 a 1.000) | doencas achadas 178 de 180 | saudaveis certas 21 de 21 | incertas 0.0%
+fora da dobra (treino + validacao): acerto 0.989 | incertas 0.1% (acerto 0% nelas)

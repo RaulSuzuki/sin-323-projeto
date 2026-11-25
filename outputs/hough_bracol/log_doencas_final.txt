@@ -1,1 +1,1 @@
-modelo das doencas v2 (floresta, com nivel 1 por doenca, 1077 folhas com doenca de treino + validacao): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\bracol_doencas.joblib
+modelo das doencas (1077 folhas com doenca de treino + validacao; media com a ConvNeXt-Tiny, peso 0.25 nas arvores): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\bracol_doencas.joblib

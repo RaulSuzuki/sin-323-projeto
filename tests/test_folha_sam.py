@@ -1,9 +1,9 @@
-"""Testes da escolha de mascara e do recorte da folha-alvo (folha_sam.py). Sem SAM: so as funcoes puras."""
+"""Testes da escolha da mascara da folha (folha_sam.py). Sem SAM: so as funcoes puras."""
 import unittest
 
 import numpy as np
 
-from folha_sam import FUNDO, caixa, componente_do_centro, escolher_mascara, recortar
+from folha_sam import componente_do_centro, escolher_mascara
 
 
 def retangulo(h, w, y0, y1, x0, x1):
@@ -33,7 +33,7 @@ class TestMascara(unittest.TestCase):
         self.assertAlmostEqual(info["area"], 0.30)
         self.assertTrue(m[50, 100])
 
-    def test_confianca_baixa_vira_foto_inteira(self):
+    def test_confianca_baixa_fica_marcada(self):
         h, w = 100, 200
         m, info = escolher_mascara(retangulo(h, w, 20, 80, 50, 150)[None], np.array([0.5]))
         self.assertIsNone(m)
@@ -44,27 +44,6 @@ class TestMascara(unittest.TestCase):
         m, info = escolher_mascara(retangulo(100, 200, 0, 30, 0, 60)[None], np.array([0.99]))
         self.assertIsNone(m)
         self.assertEqual(info["motivo"], "sem mascara valida no centro")
-
-
-class TestRecorte(unittest.TestCase):
-    def test_caixa_com_margem_e_limites(self):
-        m = retangulo(300, 400, 50, 150, 100, 200)  # caixa 100x100
-        self.assertEqual(caixa(m, margem=0.10), (90, 40, 210, 160))
-        self.assertEqual(caixa(retangulo(300, 400, 0, 100, 0, 100), margem=0.10), (0, 0, 110, 110))
-
-    def test_recorte_tem_o_tamanho_da_rede_e_preenche_com_o_fundo(self):
-        img = np.full((300, 400, 3), 200, np.uint8)
-        out = recortar(img, (0, 0, 100, 300))  # recorte alto e estreito: sobra borda dos lados
-        self.assertEqual(out.shape, (288, 512, 3))
-        self.assertEqual(tuple(out[144, 0]), FUNDO)
-        self.assertEqual(tuple(out[144, 256]), (200, 200, 200))
-
-    def test_recorte_com_mascara_apaga_o_fundo(self):
-        img = np.full((300, 400, 3), 200, np.uint8)
-        m = retangulo(300, 400, 0, 300, 0, 200)  # so a metade esquerda e folha
-        out = recortar(img, (0, 0, 400, 300), mascara=m)
-        self.assertEqual(tuple(out[150, 100]), (200, 200, 200))
-        self.assertEqual(tuple(out[150, 400]), FUNDO)
 
 
 if __name__ == "__main__":

@@ -19,18 +19,15 @@ TALVEZ = '<span class="veredito talvez">Incerto</span>'
 
 
 class DiagFalso:
-    def __init__(self, ferrugem=True, incerto=None, p=None, extra=None):
-        self.ferrugem, self.incerto, self.p, self.extra, self.formas = ferrugem, incerto, p, extra or {}, []
+    def __init__(self, doenca=True, p=None, extra=None):
+        self.doenca, self.p, self.extra, self.formas = doenca, p, extra or {}, []
 
     def diagnosticar(self, img):
         self.formas.append(img.shape)
-        p = self.p or ({"healthy": 0.1, "red_spider_mite": 0.2, "rust": 0.7} if self.ferrugem else
-                       {"healthy": 0.8, "red_spider_mite": 0.15, "rust": 0.05})
-        r = {"ferrugem": self.ferrugem, "p": p, "p_hough": p, "p_resnet": None, "limiar": 0.3,
+        p = self.p or ({"healthy": 0.3, "disease": 0.7} if self.doenca else {"healthy": 0.8, "disease": 0.2})
+        r = {"positivo": self.doenca, "p": p, "limiar": 0.5,
              "circulos": [(50.0, 40.0, 10.0, 0.9)], "mascara": np.ones(img.shape[:2], bool), "confianca": 0.8,
              "aviso": "aviso de teste"}
-        if self.incerto is not None:  # diagnosticadores antigos nao tem a chave: a pagina tem de funcionar sem ela
-            r.update({"incerto": self.incerto, "margem": 0.15})
         r.update(self.extra)
         return r
 
@@ -91,7 +88,7 @@ class TestPagina(unittest.TestCase):
         self.assertIn("multiple", html)
         self.assertIn("Não substitui o agrônomo", html)
 
-    def test_foto_com_ferrugem_mostra_veredito_probabilidades_e_imagem(self):
+    def test_foto_com_doenca_mostra_veredito_probabilidades_e_imagem(self):
         r = self._enviar([(jpeg(), "folha1.jpg")])
         html = r.get_data(as_text=True)
         self.assertEqual(r.status_code, 200)
@@ -103,8 +100,8 @@ class TestPagina(unittest.TestCase):
         self.assertIn("aviso de teste", html)
         self.assertEqual(self.diag.formas, [(90, 160, 3)])
 
-    def test_foto_sem_ferrugem(self):
-        cliente = aplicativo.criar_app(DiagFalso(ferrugem=False)).test_client()
+    def test_foto_saudavel(self):
+        cliente = aplicativo.criar_app(DiagFalso(doenca=False)).test_client()
         r = cliente.post("/", data={"fotos": [(io.BytesIO(jpeg()), "ok.jpg")]}, content_type="multipart/form-data")
         html = r.get_data(as_text=True)
         self.assertIn(SAUDAVEL, html)
@@ -112,7 +109,7 @@ class TestPagina(unittest.TestCase):
 
     def test_foto_incerta_mostra_incerto_e_manda_ao_agronomo(self):
         """Nem saudavel (45%) nem doenca (55%) passa de 60%: a resposta e 'incerto', com o palpite."""
-        p = {"healthy": 0.45, "red_spider_mite": 0.20, "rust": 0.35}
+        p = {"healthy": 0.45, "disease": 0.55}
         cliente = aplicativo.criar_app(DiagFalso(p=p)).test_client()
         r = cliente.post("/", data={"fotos": [(io.BytesIO(jpeg()), "duvida.jpg")]}, content_type="multipart/form-data")
         html = r.get_data(as_text=True)
@@ -125,7 +122,7 @@ class TestPagina(unittest.TestCase):
         self.assertIn("nem saudável nem doença passou de 60%", html)
 
     def test_foto_segura_nao_e_marcada_como_incerta(self):
-        cliente = aplicativo.criar_app(DiagFalso(ferrugem=True, incerto=False)).test_client()
+        cliente = aplicativo.criar_app(DiagFalso(doenca=True)).test_client()
         r = cliente.post("/", data={"fotos": [(io.BytesIO(jpeg()), "certa.jpg")]}, content_type="multipart/form-data")
         html = r.get_data(as_text=True)
         self.assertIn(SIM, html)
@@ -213,20 +210,6 @@ class TestPagina(unittest.TestCase):
         self.assertNotIn("Traceback", html)
         self.assertNotIn("CUDA", html)
 
-    def test_modelo_de_outro_conjunto_mostra_outra_lesao(self):
-        class Geral(DiagFalso):
-            def diagnosticar(self, img):
-                r = super().diagnosticar(img)
-                r["p"] = {"healthy": 0.1, "other": 0.2, "rust": 0.7}
-                return r
-
-        cliente = aplicativo.criar_app(Geral()).test_client()
-        r = cliente.post("/", data={"fotos": [(io.BytesIO(jpeg()), "a.jpg")]}, content_type="multipart/form-data")
-        html = r.get_data(as_text=True)
-        self.assertEqual(r.status_code, 200)
-        self.assertIn("Outra doença", html)
-        self.assertNotIn("Ácaro-vermelho", html)
-
     def _html(self, diag, n=1):
         cliente = aplicativo.criar_app(diag).test_client()
         r = cliente.post("/", data={"fotos": [(io.BytesIO(jpeg()), f"f{i}.jpg") for i in range(n)]},
@@ -237,51 +220,51 @@ class TestPagina(unittest.TestCase):
     TIPOS = 'aria-label="Doenças"'  # a parte com a probabilidade de cada classe
 
     def test_saudavel_mostra_so_saudavel_e_doenca(self):
-        """30% de ferrugem passava do limiar antigo (30%); agora e saudavel, sem a parte dos tipos nem a severidade."""
-        html = self._html(DiagFalso(p={"healthy": 0.65, "red_spider_mite": 0.05, "rust": 0.30}, extra={"area_lesao": 0.07}))
+        """Saudavel: sem a parte das doencas nem a severidade."""
+        html = self._html(DiagFalso(p={"healthy": 0.65, "disease": 0.35}, extra={"area_lesao": 0.07}))
         self.assertIn(SAUDAVEL, html)
         self.assertNotIn(SIM, html)
-        self.assertIn("<span>Doença</span><span>35%</span>", html)  # doenca = acaro + ferrugem
+        self.assertIn("<span>Doença</span><span>35%</span>", html)
         self.assertNotIn(self.TIPOS, html)
         self.assertNotIn("Severidade estimada</span>", html)
 
-    def test_doenca_sem_o_modelo_das_doencas_mostra_as_classes_do_modelo_de_hough(self):
-        html = self._html(DiagFalso(p={"healthy": 0.10, "red_spider_mite": 0.75, "rust": 0.15}))
+    def test_doenca_sem_o_modelo_das_doencas_avisa(self):
+        html = self._html(DiagFalso(p={"healthy": 0.10, "disease": 0.90}))
         self.assertIn(SIM, html)
         self.assertIn("<span>Doença</span><span>90%</span>", html)
-        tipos = html.split(self.TIPOS)[1].split("</div>\n          </div>")[0]
-        self.assertIn("Doença mais provável</span><strong>Ácaro-vermelho</strong>", tipos)
-        for nome, p in (("Saudável", "10%"), ("Ácaro-vermelho", "75%"), ("Ferrugem", "15%")):  # todas as classes
-            self.assertIn(f"<span>{nome}</span><span>{p}</span>", tipos)
+        tipos = html.split(self.TIPOS)[1]
+        self.assertIn("Modelo das doenças indisponível", tipos)
+        self.assertNotIn("Doença mais provável", tipos)
 
     def test_classificar(self):
-        k = aplicativo.classificar({"healthy": 0.2, "other": 0.5, "rust": 0.3})
-        self.assertEqual((k["doenca"], k["incerto"], k["tipo"]), (True, False, "other"))
+        k = aplicativo.classificar({"healthy": 0.2, "disease": 0.8})
+        self.assertEqual((k["doenca"], k["incerto"]), (True, False))
         self.assertAlmostEqual(k["p_doenca"], 0.8)
-        k = aplicativo.classificar({"healthy": 0.55, "other": 0.25, "rust": 0.2})
+        k = aplicativo.classificar({"healthy": 0.55, "disease": 0.45})
         self.assertEqual((k["doenca"], k["incerto"]), (False, True))
 
     def test_resumo_conta_saudaveis_doencas_e_tipos(self):
         class Varios(DiagFalso):
-            ps = [{"healthy": 0.8, "red_spider_mite": 0.1, "rust": 0.1}, {"healthy": 0.1, "red_spider_mite": 0.1, "rust": 0.8},
-                  {"healthy": 0.5, "red_spider_mite": 0.25, "rust": 0.25}]
+            ps = [{"healthy": 0.8, "disease": 0.2}, {"healthy": 0.1, "disease": 0.9}, {"healthy": 0.5, "disease": 0.5}]
 
             def diagnosticar(self, img):
                 self.p = self.ps[len(self.formas) % 3]
                 return super().diagnosticar(img)
 
-        html = self._html(Varios(), n=3)
+        html = self._html(Varios(extra={"p_doencas": self.P_DOENCAS, "limiares_doencas": self.LIMIARES}), n=3)
         resumo = html.split('<dl class="resumo">')[1].split("</dl>")[0]
         self.assertIn("<dd>1</dd><dt>saudável</dt>", resumo)
-        self.assertIn("<dd>1</dd><dt>com doença (0 ácaro-vermelho, 1 ferrugem)</dt>", resumo)
+        self.assertIn("<dd>1</dd><dt>com doença (1 bicho-mineiro, 1 ferrugem, 0 mancha de phoma, 0 cercosporiose)</dt>",
+                      resumo)
         self.assertIn("<dd>1</dd><dt>incerta</dt>", resumo)
 
     P_DOENCAS = {"miner": 0.62, "rust": 0.81, "phoma": 0.05, "cercospora": 0.20}
     LIMIARES = {"miner": 0.35, "rust": 0.70, "phoma": 0.33, "cercospora": 0.48}
 
-    def _com_doencas(self, p_doencas=None):
-        return DiagFalso(p={"healthy": 0.05, "other": 0.15, "rust": 0.80},
-                         extra={"p_doencas": p_doencas or self.P_DOENCAS, "limiares_doencas": self.LIMIARES})
+    def _com_doencas(self, p_doencas=None, extra=None):
+        return DiagFalso(p={"healthy": 0.05, "disease": 0.95},
+                         extra={"p_doencas": p_doencas or self.P_DOENCAS, "limiares_doencas": self.LIMIARES,
+                                **(extra or {})})
 
     def test_com_o_modelo_das_doencas_cada_doenca_tem_a_sua_probabilidade(self):
         """Multirrotulo: bicho-mineiro e ferrugem passam dos seus limiares; as outras duas aparecem, sem passar."""
@@ -291,7 +274,11 @@ class TestPagina(unittest.TestCase):
         for nome, p in (("Bicho-mineiro", "62%"), ("Ferrugem", "81%"), ("Mancha de phoma", "5%"), ("Cercosporiose", "20%")):
             self.assertIn(f"<span>{nome}</span><span>{p}</span>", tipos)
         self.assertIn('style="left: 70.0%"', tipos)  # o traco do limiar da ferrugem
-        self.assertNotIn("Outra doença</span><span>", tipos)  # as classes do modelo de Hough nao aparecem
+        self.assertNotIn("ConvNeXt", tipos)
+
+    def test_com_a_convnext_a_pagina_diz_que_e_uma_media(self):
+        html = self._html(self._com_doencas(extra={"p_doencas_convnext": {"miner": 0.5}}))
+        self.assertIn("média das árvores (círculos) com a ConvNeXt-Tiny", html.split(self.TIPOS)[1])
 
     def test_nenhuma_doenca_passa_do_limiar_mostra_a_mais_provavel(self):
         html = self._html(self._com_doencas({"miner": 0.10, "rust": 0.30, "phoma": 0.20, "cercospora": 0.40}))
@@ -302,6 +289,10 @@ class TestPagina(unittest.TestCase):
         resumo = html.split('<dl class="resumo">')[1].split("</dl>")[0]
         self.assertIn("<dd>2</dd><dt>com doença (2 bicho-mineiro, 2 ferrugem, 0 mancha de phoma, 0 cercosporiose)</dt>",
                       resumo)
+
+    def test_resumo_sem_o_modelo_das_doencas_nao_lista_doencas(self):
+        html = self._html(DiagFalso(), n=2)
+        self.assertIn("<dd>2</dd><dt>com doença</dt>", html.split('<dl class="resumo">')[1])
 
     def test_por_doenca(self):
         linhas, provaveis = aplicativo.por_doenca(self.P_DOENCAS, self.LIMIARES)
@@ -317,9 +308,9 @@ class TestPagina(unittest.TestCase):
     def test_circulo_na_cor_da_classe_com_que_mais_se_parece(self):
         img = np.zeros((100, 160, 3), np.uint8)
         r = {"mascara": np.ones((100, 160), bool), "circulos": [(80.0, 50.0, 20.0, 0.1)],
-             "circulos_classes": [{"healthy": 0.1, "other": 0.8, "rust": 0.1}]}
+             "circulos_classes": [{"healthy": 0.2, "disease": 0.8}]}
         saida = aplicativo.desenhar_classes(img, r)
-        self.assertEqual(tuple(int(v) for v in saida[50, 80 + 20 + 2]), aplicativo.CORES_CIRCULO["other"])
+        self.assertEqual(tuple(int(v) for v in saida[50, 80 + 20 + 2]), aplicativo.CORES_CIRCULO["disease"])
         r.pop("circulos_classes")  # sem probabilidades por classe: cinza
         self.assertEqual(tuple(int(v) for v in aplicativo.desenhar_classes(img, r)[50, 102]), aplicativo.CINZA)
 
@@ -327,14 +318,13 @@ class TestPagina(unittest.TestCase):
         """circulos_doencas (saudavel e as quatro doencas) vale mais que as classes do modelo de Hough."""
         img = np.zeros((100, 160, 3), np.uint8)
         r = {"mascara": np.ones((100, 160), bool), "circulos": [(80.0, 50.0, 20.0, 0.1)],
-             "circulos_classes": [{"healthy": 0.1, "other": 0.8, "rust": 0.1}],
+             "circulos_classes": [{"healthy": 0.2, "disease": 0.8}],
              "circulos_doencas": [{"healthy": 0.1, "miner": 0.1, "rust": 0.1, "phoma": 0.6, "cercospora": 0.1}]}
         saida = aplicativo.desenhar_classes(img, r)
         self.assertEqual(tuple(int(v) for v in saida[50, 102]), aplicativo.CORES_CIRCULO["phoma"])
 
     def test_cada_doenca_conhecida_tem_uma_cor_propria(self):
-        for classes in (["healthy", "miner", "rust", "phoma", "cercospora"], ["healthy", "red_spider_mite", "rust"],
-                        ["healthy", "other", "rust"]):
+        for classes in (["healthy", "miner", "rust", "phoma", "cercospora"], ["healthy", "disease"]):
             cores = [aplicativo.CORES_CIRCULO[c] for c in classes]
             self.assertEqual(len(set(cores)), len(classes), classes)
         self.assertEqual(aplicativo.cor_css("rust"), "#e62828")
@@ -348,35 +338,25 @@ class TestPagina(unittest.TestCase):
                              ("mancha de phoma", "phoma"), ("cercosporiose", "cercospora")):
             self.assertIn(f'<i class="ponto" style="border-color: {aplicativo.cor_css(classe)}"></i>{nome}</span>',
                           chaves)
-        self.assertNotIn("outra doença", chaves)
-        # sem a pontuacao dos circulos por doenca, a legenda e a das classes do modelo de Hough
+        # sem a pontuacao dos circulos por doenca, a legenda e a das classes do passo 1
         chaves = self._html(self._com_doencas()).split('<div class="chaves"')[1].split("</div>")[0]
-        self.assertIn("outra doença</span>", chaves)
+        self.assertIn("doença</span>", chaves)
         self.assertNotIn("cercosporiose", chaves)
 
-    def test_caminho_do_modelo_de_cada_conjunto(self):
+    def test_so_os_modelos_do_bracol(self):
         import hough_dados as hd
-        for nome in ("rocole", "bracol"):
-            self.assertEqual(aplicativo.caminho_modelo(nome), hd.carregar_conjunto(nome).artefato)
-
-    def test_o_modelo_padrao_e_o_do_bracol(self):
-        self.assertEqual(aplicativo.MODELO_PADRAO, "bracol")
-        self.assertEqual(aplicativo.argumentos([]).modelo, "bracol")
-        self.assertEqual(aplicativo.argumentos(["--modelo", "rocole"]).modelo, "rocole")
+        self.assertEqual(aplicativo.ARTEFATO, hd.carregar_conjunto("bracol").artefato)
+        self.assertEqual(aplicativo.ARTEFATO_DOENCAS.name, "bracol_doencas.joblib")
+        self.assertFalse(aplicativo.argumentos([]).sem_convnext)
+        self.assertTrue(aplicativo.argumentos(["--sem-convnext"]).sem_convnext)
         with self.assertRaises(SystemExit):
-            aplicativo.argumentos(["--modelo", "ambos"])  # nao ha modelo dos dois conjuntos juntos
+            aplicativo.argumentos(["--modelo", "outro"])  # o aplicativo so tem os modelos do BRACOL
 
-    def test_rodape_diz_em_que_fotos_o_modelo_carregado_foi_treinado(self):
+    def test_rodape_diz_em_que_fotos_os_modelos_foram_treinados(self):
         padrao = self.cliente.get("/").get_data(as_text=True)
         self.assertIn("BRACOL", padrao)
         self.assertIn("arábica", padrao)
-        self.assertNotIn("RoCoLe", padrao)
-        rocole = aplicativo.criar_app(DiagFalso(), modelo="rocole").test_client().get("/").get_data(as_text=True)
-        self.assertIn("RoCoLe", rocole)
-        self.assertIn("robusta", rocole)
-        self.assertNotIn("BRACOL", rocole)
-        for html in (padrao, rocole):
-            self.assertIn("Não substitui o agrônomo", html)
+        self.assertIn("Não substitui o agrônomo", padrao)
 
     def test_rodape_aparece_tambem_depois_de_um_envio_e_num_erro(self):
         self.assertIn("BRACOL", self._enviar([(jpeg(), "a.jpg")]).get_data(as_text=True))

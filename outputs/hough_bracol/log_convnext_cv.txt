@@ -1,0 +1,57 @@
+dobra 0: treino 685, validacao interna 115, fora 400
+  ep 01 perda 1.718 | mAP 0.751 | 124s
+  ep 02 perda 1.293 | mAP 0.846 | 22s
+  ep 03 perda 0.811 | mAP 0.907 | 17s
+  ep 04 perda 0.676 | mAP 0.917 | 17s
+  ep 05 perda 0.571 | mAP 0.925 | 19s
+  ep 06 perda 0.492 | mAP 0.900 | 15s
+  ep 07 perda 0.437 | mAP 0.912 | 19s
+  ep 08 perda 0.368 | mAP 0.904 | 19s
+  ep 09 perda 0.325 | mAP 0.927 | 22s
+  ep 10 perda 0.248 | mAP 0.945 | 18s
+  ep 11 perda 0.254 | mAP 0.933 | 22s
+  ep 12 perda 0.233 | mAP 0.933 | 20s
+  ep 13 perda 0.187 | mAP 0.930 | 21s
+  ep 14 perda 0.134 | mAP 0.929 | 17s
+  ep 15 perda 0.119 | mAP 0.923 | 24s
+  ep 16 perda 0.103 | mAP 0.923 | 21s
+  ep 17 perda 0.090 | mAP 0.927 | 21s
+  ep 18 perda 0.074 | mAP 0.927 | 17s
+  parada antecipada
+dobra 1: treino 686, validacao interna 115, fora 399
+  ep 01 perda 1.731 | mAP 0.721 | 30s
+  ep 02 perda 1.253 | mAP 0.840 | 11s
+  ep 03 perda 0.817 | mAP 0.907 | 12s
+  ep 04 perda 0.705 | mAP 0.883 | 12s
+  ep 05 perda 0.607 | mAP 0.926 | 13s
+  ep 06 perda 0.495 | mAP 0.937 | 12s
+  ep 07 perda 0.462 | mAP 0.913 | 12s
+  ep 08 perda 0.400 | mAP 0.922 | 19s
+  ep 09 perda 0.349 | mAP 0.921 | 18s
+  ep 10 perda 0.306 | mAP 0.923 | 22s
+  ep 11 perda 0.265 | mAP 0.921 | 17s
+  ep 12 perda 0.248 | mAP 0.931 | 25s
+  ep 13 perda 0.181 | mAP 0.915 | 19s
+  ep 14 perda 0.174 | mAP 0.912 | 12s
+  parada antecipada
+dobra 2: treino 685, validacao interna 114, fora 401
+  ep 01 perda 1.745 | mAP 0.748 | 57s
+  ep 02 perda 1.275 | mAP 0.874 | 17s
+  ep 03 perda 0.813 | mAP 0.912 | 12s
+  ep 04 perda 0.650 | mAP 0.904 | 20s
+  ep 05 perda 0.540 | mAP 0.909 | 17s
+  ep 06 perda 0.507 | mAP 0.902 | 18s
+  ep 07 perda 0.415 | mAP 0.905 | 14s
+  ep 08 perda 0.418 | mAP 0.926 | 13s
+  ep 09 perda 0.346 | mAP 0.903 | 13s
+  ep 10 perda 0.300 | mAP 0.931 | 11s
+  ep 11 perda 0.243 | mAP 0.910 | 11s
+  ep 12 perda 0.217 | mAP 0.920 | 19s
+  ep 13 perda 0.201 | mAP 0.913 | 18s
+  ep 14 perda 0.167 | mAP 0.914 | 11s
+  ep 15 perda 0.132 | mAP 0.922 | 14s
+  ep 16 perda 0.132 | mAP 0.921 | 20s
+  ep 17 perda 0.106 | mAP 0.916 | 21s
+  ep 18 perda 0.073 | mAP 0.919 | 23s
+  parada antecipada
+ConvNeXt-Tiny fora da dobra (1200 folhas): mAP 0.929 | gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\outputs\hough_bracol\convnext_oof.csv

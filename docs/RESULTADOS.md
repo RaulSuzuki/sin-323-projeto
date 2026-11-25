@@ -1,50 +1,65 @@
 # Resultados
 
-Cada número foi lido do arquivo indicado. O teste foi usado uma vez por modelo; modelo, limiares e regras foram
-escolhidos na validação ou em validação cruzada no treino + validação.
+Cada número foi lido do arquivo indicado, todos em `outputs/hough_bracol/`. Modelo, limiares e pesos foram
+escolhidos em validação cruzada no treino + validação do BRACOL; o teste foi lido uma vez, no fim.
 
-## 1. Aplicativo
-
-### Saudável ou doença
+## Passo 1: saudável ou doença
 
 P(doença) = 1 − P(saudável); vale a maior das duas. "Incerto" quando nenhuma passa de 60%.
-Arquivos: `outputs/hough_bracol/aplicativo_dois_passos.json` e `outputs/hough/aplicativo_dois_passos.json`.
+Arquivos: `resultados_teste.json` e `teste_intervalos_confianca.csv`.
 
-| | BRACOL (modelo padrão) | RoCoLe (`--modelo rocole`) |
-|---|---|---|
-| Acerto no teste | **99,5%** (98,5% a 100%) | **96,6%** (92,3% a 99,1%) |
-| Doença achada no teste | 99,4% (98,3% a 100%) | 93,2% (86,1% a 98,1%) |
-| Saudável certa no teste | 100% (21 de 21) | 100% (105 de 105) |
-| "Incerto" no teste | 0% | 1,4% (3 de 208) |
-| Acerto fora da dobra | 99,1% | 95,8% |
-| "Incerto" fora da dobra | 0,8% (acerto de 78% nelas) | 3,8% (acerto de 69% nelas) |
+| | Teste (201 folhas) | IC 95% | Fora da dobra (1.200 folhas) |
+|---|---|---|---|
+| Acerto | **99,0%** | 97,5% a 100% | 98,9% |
+| Doenças achadas | 98,9% (178 de 180) | 97,2% a 100% | 99,0% (1.066 de 1.077) |
+| Saudáveis certas | 100% (21 de 21) | | 98,4% (121 de 123) |
+| "Incerto" | 0% | | 0,1% (1 folha) |
 
-### Quais doenças (BRACOL)
+As 2 folhas com doença que viraram "saudável" no teste (104 e 1079) têm só ferrugem, com severidade muito baixa.
 
-Teste com as 180 folhas que têm doença.
-Arquivos: `outputs/hough_bracol/doencas_teste.json` e `doencas_teste_por_doenca.csv`.
+Validação cruzada (F1 macro de saudável × doença; `cv_resumo.csv`, `decisao.json`): a base `completo` ficou com
+**0,972**; nenhuma alternativa passou a regra. Sem os círculos do Hough, 0,969; só com os círculos, 0,951.
+
+## Passo 2: quais doenças
+
+Teste com as 180 folhas que têm doença. Árvores (um classificador por doença, com o nível 1 por doença) em média com a
+ConvNeXt-Tiny, peso 0,25 nas árvores.
+Arquivos: `doencas_teste.json`, `doencas_teste_por_doenca.csv` e `doencas_predicoes_teste.csv`.
 
 | Métrica | Valor | IC 95% |
 |---|---|---|
-| F1 macro | **0,860** | 0,815 a 0,899 |
-| Acerto exato do conjunto de doenças | 78,3% | 72,1% a 84,4% |
-| A doença mais provável está entre as da folha | 96,7% | |
-| F1 macro fora da dobra | 0,825 | |
+| F1 macro | **0,908** | 0,871 a 0,940 |
+| Doenças da folha todas certas | 84,4% | 78,9% a 90,0% |
+| A doença mais provável está entre as da folha | 97,8% | |
 
 | Doença | Positivos | Precisão | Recall | F1 | AP |
 |---|---|---|---|---|---|
-| Bicho-mineiro | 49 | 0,900 | 0,735 | 0,809 | 0,917 |
-| Ferrugem | 86 | 0,988 | 0,930 | 0,958 | 0,991 |
-| Mancha de phoma | 51 | 0,942 | 0,961 | 0,951 | 0,990 |
-| Cercosporiose | 44 | 0,643 | 0,818 | 0,720 | 0,824 |
+| Bicho-mineiro | 49 | 0,896 | 0,878 | 0,887 | 0,941 |
+| Ferrugem | 86 | 0,955 | 0,988 | 0,971 | 0,999 |
+| Mancha de phoma | 51 | 0,979 | 0,902 | 0,939 | 0,991 |
+| Cercosporiose | 44 | 0,809 | 0,864 | 0,835 | 0,891 |
 
-O mesmo modelo sem o nível 1 por doença teve F1 macro 0,834 no teste e 0,810 fora da dobra. A troca foi decidida pela
-validação cruzada (`doencas_cv_por_doenca_resumo.csv`).
+### Como o modelo foi escolhido
 
-### Severidade (BRACOL)
+F1 macro fora da dobra, nas 1.077 folhas com doença do treino + validação, 3 dobras. Uma opção só substitui a atual
+com média maior e vitória em pelo menos 2 das 3 dobras.
+
+| Etapa | Opção | Média | Arquivo |
+|---|---|---|---|
+| Classificador | gradient boosting (adotado) / árvores extremamente aleatórias / regressão logística | 0,745 / 0,728 / 0,731 | `doencas_cv_resumo.csv` |
+| Nível 1 por doença | sem / com (adotado) | 0,745 / 0,825 | `doencas_cv_por_doenca_resumo.csv` |
+| Média com a ConvNeXt-Tiny | só árvores / peso 0,25 (adotado) / 0,5 / 0,75 | 0,825 / 0,876 / 0,870 / 0,848 | `doencas_fusao_resumo.csv` |
+| Referência | ConvNeXt-Tiny sozinha | 0,858 | `doencas_fusao_resumo.csv` |
+
+- ConvNeXt-Tiny fora da dobra: mAP 0,929 (`convnext_oof.csv`). Rede final: melhor época 18 (`models/bracol_convnext.json`).
+- Limiares da média: bicho-mineiro 0,66, ferrugem 0,40, mancha de phoma 0,54 e cercosporiose 0,48
+  (`doencas_decisao.json`).
+- Só para descrever (nada foi escolhido com isso): no mesmo teste, as árvores sozinhas tiveram F1 macro de 0,861.
+
+## Severidade
 
 Fração da folha com cor de lesão, nas faixas de área do BRACOL; nenhum corte ajustado aos dados. Validação com 200
-folhas; o teste não foi usado. Arquivo: `outputs/hough_bracol/severidade_validacao.json`.
+folhas; o teste não foi usado. Arquivo: `severidade_validacao.json`.
 
 | Métrica | Valor |
 |---|---|
@@ -53,68 +68,5 @@ folhas; o teste não foi usado. Arquivo: `outputs/hough_bracol/severidade_valida
 | Kappa quadrático | 0,785 |
 | Acerto de quem chuta sempre a classe mais comum | 61,5% |
 
-## 2. Detectores do primeiro passo
-
-### BRACOL: detector com o Hough
-
-Teste com 201 folhas, 86 com ferrugem.
-Arquivos: `outputs/hough_bracol/resultados_teste.json` e `teste_intervalos_confianca.csv`.
-
-| Métrica | Valor | IC 95% |
-|---|---|---|
-| F1 de ferrugem | 0,949 | 0,912 a 0,979 |
-| Sensibilidade | 0,965 (83 de 86) | 0,921 a 1,000 |
-| Especificidade | 0,948 (6 alarmes em 115) | 0,906 a 0,983 |
-| F1 fora da dobra | 0,939 | |
-
-### RoCoLe: detector com o Hough e ResNet-50
-
-Média das probabilidades do detector e da ResNet-50. Teste com 208 fotos, 81 com ferrugem.
-Arquivos: `outputs/hough/resultados_teste_fusao.json` e `teste_intervalos_confianca_fusao.csv`.
-
-| Métrica | Valor | IC 95% |
-|---|---|---|
-| F1 de ferrugem | 0,879 | 0,774 a 0,934 |
-| Sensibilidade | 0,938 | 0,855 a 0,987 |
-| Especificidade | 0,874 | 0,784 a 0,935 |
-| F1 fora da dobra | 0,847 | |
-
-## 3. Outros modelos e comparações
-
-### RoCoLe: comparação e recusa
-
-Arquivos: `outputs/hough/resultados_teste.json`, `outputs/resnet50/resultados_teste.json`,
-`outputs/regras/resultados_teste.json`, `outputs/hough/recusa_teste.json` e `recusa_teste_ic.csv`.
-
-| F1 de ferrugem no teste | Fusão | Detector com o Hough | ResNet-50 | Detector por regras |
-|---|---|---|---|---|
-| F1 | **0,879** | 0,876 (0,761 a 0,941) | 0,835 (0,700 a 0,906) | 0,476 (0,322 a 0,559) |
-
-Com recusa nas fotos em dúvida, o detector responde a 86,1% das fotos (IC 95% 75,6% a 92,6%), com F1 de **0,935**
-(IC 95% 0,845 a 0,980) nas aceitas.
-
-### RoCoLe: ResNet-50 em três classes
-
-ResNet-50 com entrada 512×288. Teste com 208 fotos.
-Arquivos: `outputs/resnet50/resultados_teste.json` e `teste_intervalos_confianca.csv`.
-
-| Métrica | Valor | IC 95% |
-|---|---|---|
-| F1 macro | 0,753 | 0,650 a 0,829 |
-| Acurácia | 86,1% | 77,0% a 91,7% |
-| F1 Saudável | 0,958 | 0,915 a 0,982 |
-| F1 Ácaro-vermelho | 0,465 | 0,216 a 0,654 |
-| F1 Ferrugem | 0,835 | 0,700 a 0,906 |
-
-### BRACOL: quatro doenças e severidade (ConvNeXt-Tiny)
-
-Experimento anterior ao aplicativo. Entrada 512×256; teste com 201 folhas. Os arquivos ficam no projeto original
-(`outputs/resultados_teste.json`, `outputs/teste_intervalos_confianca.csv` e `outputs/teste_por_doenca.csv` de lá).
-
-| Métrica | Valor | IC 95% |
-|---|---|---|
-| Acerto exato do conjunto de doenças | 84,6% | 79,6% a 89,6% |
-| mAP | 0,950 | 0,917 a 0,979 |
-| F1 macro | 0,904 | 0,871 a 0,935 |
-| Severidade (acurácia) | 83,1% | 78,1% a 88,1% |
-| Acerto nas folhas aceitas (77,6% aceitas) | 92,3% | |
+Os resultados dos experimentos anteriores estão em [RELATORIO_BRACOL.md](RELATORIO_BRACOL.md) e
+[RELATORIO_ROCOLE.md](RELATORIO_ROCOLE.md).

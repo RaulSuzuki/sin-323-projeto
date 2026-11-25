@@ -1,7 +1,7 @@
-adotado: nivel 1 por doenca + floresta | limiares {'miner': 0.42, 'rust': 0.52, 'phoma': 0.44, 'cercospora': 0.4}
+adotado: nivel 1 por doenca + hgb | limiares {'miner': 0.38, 'rust': 0.26, 'phoma': 0.44, 'cercospora': 0.24}
     doenca  positivos  precisao  recall    f1    ap
-     miner        290     0.830   0.772 0.800 0.882
-      rust        519     0.958   0.921 0.939 0.986
-     phoma        301     0.928   0.947 0.938 0.986
-cercospora        254     0.601   0.740 0.663 0.715
-fora da dobra: F1 macro 0.835, acerto exato 0.717
+     miner        290     0.833   0.776 0.804 0.865
+      rust        519     0.925   0.944 0.934 0.983
+     phoma        301     0.916   0.947 0.931 0.978
+cercospora        254     0.607   0.728 0.662 0.689
+fora da dobra: F1 macro 0.833, acerto exato 0.707

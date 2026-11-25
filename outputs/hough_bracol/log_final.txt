@@ -1,0 +1,1 @@
+modelo final de 'bracol' (1200 fotos de treino + validacao): C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\bracol_hough.joblib

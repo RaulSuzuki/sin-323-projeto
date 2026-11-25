@@ -1,0 +1,27 @@
+ConvNeXt-Tiny final: treino 1028, validacao interna 172
+  ep 01 perda 1.696 | mAP 0.716 | 142s
+  ep 02 perda 1.047 | mAP 0.870 | 32s
+  ep 03 perda 0.724 | mAP 0.903 | 33s
+  ep 04 perda 0.630 | mAP 0.918 | 31s
+  ep 05 perda 0.512 | mAP 0.921 | 36s
+  ep 06 perda 0.477 | mAP 0.921 | 61s
+  ep 07 perda 0.418 | mAP 0.920 | 32s
+  ep 08 perda 0.388 | mAP 0.922 | 26s
+  ep 09 perda 0.343 | mAP 0.926 | 29s
+  ep 10 perda 0.285 | mAP 0.930 | 27s
+  ep 11 perda 0.258 | mAP 0.916 | 42s
+  ep 12 perda 0.208 | mAP 0.923 | 55s
+  ep 13 perda 0.194 | mAP 0.940 | 28s
+  ep 14 perda 0.156 | mAP 0.932 | 26s
+  ep 15 perda 0.137 | mAP 0.938 | 24s
+  ep 16 perda 0.121 | mAP 0.944 | 29s
+  ep 17 perda 0.093 | mAP 0.938 | 19s
+  ep 18 perda 0.089 | mAP 0.948 | 16s
+  ep 19 perda 0.065 | mAP 0.937 | 16s
+  ep 20 perda 0.061 | mAP 0.937 | 16s
+  ep 21 perda 0.059 | mAP 0.938 | 16s
+  ep 22 perda 0.058 | mAP 0.938 | 16s
+  ep 23 perda 0.053 | mAP 0.938 | 16s
+  ep 24 perda 0.051 | mAP 0.939 | 16s
+  ep 25 perda 0.046 | mAP 0.939 | 16s
+gravado: C:\Users\rsb38\Desktop\SIN 323 - Project\coffee-leaf-disease-detection\models\bracol_convnext.pt (melhor epoca 18, mAP interno 0.948)

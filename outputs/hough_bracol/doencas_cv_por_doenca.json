@@ -1,98 +1,98 @@
 {
   "f1_macro_por_dobra": {
     "atual_hgb": [
-      0.8433,
-      0.7985,
-      0.7889
+      0.739,
+      0.7467,
+      0.7496
     ],
     "por_doenca_floresta": [
-      0.8416,
-      0.8367,
-      0.7959
+      0.8258,
+      0.8253,
+      0.8145
     ],
     "por_doenca_hgb": [
-      0.8337,
-      0.833,
-      0.7912
+      0.827,
+      0.8421,
+      0.8063
     ],
     "por_doenca_logistica": [
-      0.8316,
-      0.7958,
-      0.8118
+      0.8264,
+      0.8112,
+      0.7933
     ]
   },
   "media": {
-    "atual_hgb": 0.8102,
-    "por_doenca_floresta": 0.8248,
-    "por_doenca_hgb": 0.8193,
-    "por_doenca_logistica": 0.8131
+    "atual_hgb": 0.7451,
+    "por_doenca_floresta": 0.8219,
+    "por_doenca_hgb": 0.8251,
+    "por_doenca_logistica": 0.8103
   },
-  "escolhida": "por_doenca_floresta",
+  "escolhida": "por_doenca_hgb",
   "substitui_o_atual": true,
   "por_doenca": [
     {
       "doenca": "miner",
-      "f1": 0.7353,
-      "recall_so_ela": 0.8514,
-      "recall_com_outra": 0.5043,
-      "alarmes": 66,
+      "f1": 0.6856,
+      "recall_so_ela": 0.8229,
+      "recall_com_outra": 0.5304,
+      "alarmes": 103,
       "modelo": "atual_hgb"
     },
     {
       "doenca": "rust",
-      "f1": 0.9402,
-      "recall_so_ela": 0.9808,
-      "recall_com_outra": 0.8953,
-      "alarmes": 30,
+      "f1": 0.8492,
+      "recall_so_ela": 0.954,
+      "recall_com_outra": 0.814,
+      "alarmes": 103,
       "modelo": "atual_hgb"
     },
     {
       "doenca": "phoma",
-      "f1": 0.9347,
-      "recall_so_ela": 0.9315,
-      "recall_com_outra": 0.7778,
-      "alarmes": 17,
+      "f1": 0.9119,
+      "recall_so_ela": 0.8904,
+      "recall_com_outra": 1.0,
+      "alarmes": 20,
       "modelo": "atual_hgb"
     },
     {
       "doenca": "cercospora",
-      "f1": 0.631,
-      "recall_so_ela": 0.697,
-      "recall_com_outra": 0.6011,
-      "alarmes": 91,
+      "f1": 0.5347,
+      "recall_so_ela": 0.7424,
+      "recall_com_outra": 0.5585,
+      "alarmes": 168,
       "modelo": "atual_hgb"
     },
     {
       "doenca": "miner",
-      "f1": 0.8,
-      "recall_so_ela": 0.9143,
-      "recall_com_outra": 0.5565,
-      "alarmes": 46,
-      "modelo": "por_doenca_floresta"
+      "f1": 0.7901,
+      "recall_so_ela": 0.92,
+      "recall_com_outra": 0.5478,
+      "alarmes": 53,
+      "modelo": "por_doenca_hgb"
     },
     {
       "doenca": "rust",
-      "f1": 0.9362,
-      "recall_so_ela": 0.977,
-      "recall_com_outra": 0.8605,
-      "alarmes": 23,
-      "modelo": "por_doenca_floresta"
+      "f1": 0.9273,
+      "recall_so_ela": 0.9808,
+      "recall_com_outra": 0.8876,
+      "alarmes": 42,
+      "modelo": "por_doenca_hgb"
     },
     {
       "doenca": "phoma",
-      "f1": 0.932,
-      "recall_so_ela": 0.9589,
-      "recall_com_outra": 0.8889,
-      "alarmes": 29,
-      "modelo": "por_doenca_floresta"
+      "f1": 0.9241,
+      "recall_so_ela": 0.9349,
+      "recall_com_outra": 0.7778,
+      "alarmes": 25,
+      "modelo": "por_doenca_hgb"
     },
     {
       "doenca": "cercospora",
-      "f1": 0.6374,
-      "recall_so_ela": 0.697,
-      "recall_com_outra": 0.6436,
-      "alarmes": 103,
-      "modelo": "por_doenca_floresta"
+      "f1": 0.6582,
+      "recall_so_ela": 0.7727,
+      "recall_com_outra": 0.6968,
+      "alarmes": 117,
+      "modelo": "por_doenca_hgb"
     }
   ],
   "regra": "substitui o atual so com media maior E vitoria em >= 2 das 3 dobras; o teste nao foi lido"
